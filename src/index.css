@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Optional: smooth dark background for the whole app */
+body {
+  @apply bg-gray-950 text-gray-100;
+}
+
+/* Hidden YouTube iframe for audio-only playback */
+.youtube-audio-hidden {
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
+  position: absolute !important;
+  overflow: hidden !important;
+}
+
+/* Enhanced Input Field Styling for Better Text Visibility */
+@layer components {
+  /* Base input styling */
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  textarea,
+  select {
+    @apply text-white;
+    @apply bg-gray-800;
+    @apply border;
+    @apply border-gray-600;
+    @apply rounded-lg;
+    @apply px-3;
+    @apply py-2;
+    @apply placeholder-gray-400;
+    @apply focus:outline-none;
+    @apply focus:border-blue-500;
+    @apply transition-colors;
+    @apply duration-200;
+    
+    /* Force text color for cross-browser compatibility */
+    color: white !important;
+    background-color: #1f2937 !important;
+    
+    /* Ensure placeholder text is visible */
+    &::placeholder {
+      color: #9ca3af !important;
+      opacity: 1;
+    }
+    
+    /* Ensure option text is visible in select dropdowns */
+    & option {
+      background-color: #1f2937 !important;
+      color: white !important;
+    }
+  }
+  
+  /* Specific styling for different input types */
+  input[type="checkbox"],
+  input[type="radio"] {
+    @apply text-blue-500;
+    @apply bg-gray-800;
+    @apply border-gray-600;
+    @apply rounded;
+    @apply focus:ring-2;
+    @apply focus:ring-blue-500;
+    @apply focus:ring-offset-0;
+    
+    /* Force colors for cross-browser compatibility */
+    accent-color: #3b82f6 !important;
+    background-color: #1f2937 !important;
+  }
+  
+  /* Enhanced select dropdown styling */
+  select {
+    /* Ensure dropdown arrow is visible */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+    
+    /* Remove default dropdown arrow in webkit browsers */
+    &::-ms-expand {
+      display: none;
+    }
+    
+    /* Webkit-specific styling for better compatibility */
+    &::-webkit-select-placeholder {
+      color: #9ca3af !important;
+      opacity: 1;
+    }
+    
+    /* Ensure options are visible */
+    & option {
+      background-color: #1f2937 !important;
+      color: white !important;
+      padding: 0.5rem;
+    }
+    
+    /* Firefox-specific styling */
+    &:-moz-focusring {
+      color: transparent;
+      text-shadow: 0 0 0 white;
+    }
+  }
+  
+  /* Focus states for better accessibility */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    @apply ring-2;
+    @apply ring-blue-500;
+    @apply ring-opacity-50;
+    @apply border-blue-500;
+    @apply outline-none;
+    
+    /* Enhanced focus indicator */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+  
+  /* Disabled state styling */
+  input:disabled,
+  textarea:disabled,
+  select:disabled {
+    @apply opacity-50;
+    @apply cursor-not-allowed;
+    @apply bg-gray-800;
+  }
+  
+  /* Error state styling */
+  input:invalid,
+  textarea:invalid,
+  select:invalid {
+    @apply border-red-500;
+    @apply ring-red-500;
+    @apply ring-opacity-50;
+  }
+}
+
