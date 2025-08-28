@@ -38,7 +38,6 @@ export interface Track {
   licenseDetails?: string;
   platformCompliance?: {
     twitch: string;
-    youtube: string;
     facebook: string;
     tiktok: string;
   };
@@ -103,7 +102,6 @@ export interface LegacyTrack {
   licenseDetails: string;
   platformCompliance: {
     twitch: string;
-    youtube: string;
     facebook: string;
     tiktok: string;
   };

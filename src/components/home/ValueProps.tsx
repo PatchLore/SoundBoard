@@ -13,7 +13,7 @@ const ValueProps: React.FC = () => {
       icon: '✅',
       title: 'DMCA Safe',
       description: 'All tracks are verified safe for streaming across all major platforms.',
-      features: ['Twitch compliant', 'YouTube safe', 'Facebook ready', 'TikTok approved']
+      features: ['Twitch compliant', 'Facebook ready', 'TikTok approved']
     },
     {
       icon: '⚡',

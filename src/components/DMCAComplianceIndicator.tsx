@@ -144,7 +144,7 @@ const DMCAComplianceIndicator: React.FC<DMCAComplianceIndicatorProps> = ({
             
             <div className="flex items-center space-x-2">
               <span className={`w-2 h-2 rounded-full ${track.vodSafe ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
-              <span className="text-gray-300">YouTube</span>
+              <span className="text-gray-300">Streaming</span>
               <span className={track.vodSafe ? 'text-green-400' : 'text-yellow-400'}>
                 {track.vodSafe ? 'Safe' : 'Check'}
               </span>

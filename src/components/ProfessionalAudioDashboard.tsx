@@ -53,7 +53,7 @@ const ProfessionalAudioDashboard: React.FC = () => {
             licenseDetails: 'Professional sample track',
             platformCompliance: {
               twitch: 'safe',
-              youtube: 'safe',
+              streaming: 'safe',
               facebook: 'safe',
               tiktok: 'safe'
             },
