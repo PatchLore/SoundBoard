@@ -51,12 +51,11 @@ const ProfessionalAudioDashboard: React.FC = () => {
             vodSafe: true,
             license: 'royalty_free',
             licenseDetails: 'Professional sample track',
-            platformCompliance: {
-              twitch: 'safe',
-              streaming: 'safe',
-              facebook: 'safe',
-              tiktok: 'safe'
-            },
+                          platformCompliance: {
+                twitch: 'safe',
+                facebook: 'safe',
+                tiktok: 'safe'
+              },
             usageTracking: {
               usageCount: 0,
               lastUsed: undefined
