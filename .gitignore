@@ -83,3 +83,8 @@ jspm_packages/
 
 # TernJS port file
 .tern-port
+
+
+
+
+stream-soundboard/build/
