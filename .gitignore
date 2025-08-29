@@ -88,3 +88,6 @@ jspm_packages/
 
 
 stream-soundboard/build/
+coverage/
+cypress/screenshots/
+cypress/videos/
