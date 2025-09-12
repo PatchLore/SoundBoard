@@ -7,6 +7,7 @@ import trackManagementService from '../services/trackManagementService';
 import TrackCard from './TrackCard';
 import RoleGuard from './RoleGuard';
 import TrackUploader from './admin/TrackUploader';
+import EnhancedTrackUploader from './admin/EnhancedTrackUploader';
 import BulkUploadModal from './BulkUploadModal';
 import ImportPlaylistModal from './ImportPlaylistModal';
 import TrackEditModal from './TrackEditModal';
@@ -224,6 +225,7 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
             <button
               onClick={() => setShowUploader(true)}
               className="bg-stream-accent hover:bg-stream-accent/90 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200"
+              data-testid="upload-button"
             >
               + Add New Track
             </button>
@@ -371,10 +373,10 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
         )}
       </AnimatePresence>
 
-      {/* Track Uploader Modal */}
+      {/* Enhanced Track Uploader Modal */}
       <AnimatePresence>
         {showUploader && (
-          <TrackUploader
+          <EnhancedTrackUploader
             onTrackUpload={handleTrackUpload}
             onClose={() => setShowUploader(false)}
           />
