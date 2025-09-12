@@ -11,6 +11,7 @@ import BulkUploadModal from './BulkUploadModal';
 import ImportPlaylistModal from './ImportPlaylistModal';
 import TrackEditModal from './TrackEditModal';
 import { FiltersBar } from './FiltersBar';
+import { SkeletonGrid } from './Skeleton';
 
 interface EnhancedMusicLibraryProps {
   userRole: UserRole;
@@ -26,6 +27,7 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
   const [sortBy, setSortBy] = useState<'name' | 'energy' | 'duration' | 'uploadDate'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [isLoading, setIsLoading] = useState(true);
+  const [isFiltering, setIsFiltering] = useState(false);
   const [showUploader, setShowUploader] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [showImportPlaylist, setShowImportPlaylist] = useState(false);
@@ -55,6 +57,8 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
     try {
       if (!tracks) return;
       
+      setIsFiltering(true);
+      
       let filtered = [...tracks];
 
       // Apply search query
@@ -76,9 +80,14 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
         );
       }
 
+      // Add a small delay to show skeleton loading
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       setFilteredTracks(filtered);
     } catch (error) {
       console.error('Failed to apply filters:', error);
+    } finally {
+      setIsFiltering(false);
     }
   }, [tracks, filters, searchQuery, selectedCategory]);
 
@@ -153,11 +162,36 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="space-y-6">
+        {/* Header Skeleton */}
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-stream-accent mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading music library...</p>
+          <div className="h-10 bg-stream-darker rounded-lg w-80 mx-auto mb-2 animate-pulse"></div>
+          <div className="h-6 bg-stream-darker rounded-lg w-96 mx-auto mb-4 animate-pulse"></div>
+          <div className="flex items-center justify-center space-x-4">
+            <div className="h-4 bg-stream-darker rounded w-24 animate-pulse"></div>
+            <div className="h-4 bg-stream-darker rounded w-32 animate-pulse"></div>
+          </div>
         </div>
+
+        {/* Filters Skeleton */}
+        <div className="bg-stream-gray rounded-xl p-6 border border-stream-light/20">
+          <div className="space-y-4">
+            <div className="h-12 bg-stream-darker rounded-lg animate-pulse"></div>
+            <div className="h-8 bg-stream-darker rounded-lg w-32 animate-pulse"></div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="h-10 bg-stream-darker rounded-lg animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Tracks Grid Skeleton */}
+        <SkeletonGrid 
+          count={8} 
+          columns={viewMode === 'grid' ? 4 : 1}
+          variant={viewMode === 'grid' ? 'track' : 'compact'}
+        />
       </div>
     );
   }
@@ -261,13 +295,28 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
 
       {/* Tracks Grid/List */}
       <AnimatePresence mode="wait">
-        {filteredTracks.length === 0 ? (
+        {isFiltering ? (
+          <motion.div
+            key="skeleton-loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <SkeletonGrid 
+              count={8} 
+              columns={viewMode === 'grid' ? 4 : 1}
+              variant={viewMode === 'grid' ? 'track' : 'compact'}
+            />
+          </motion.div>
+        ) : filteredTracks.length === 0 ? (
           <motion.div
             key="no-results"
             className="text-center py-20"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
           >
             <div className="text-6xl mb-4">🎵</div>
             <h3 className="text-xl font-semibold text-white mb-2">No tracks found</h3>
@@ -289,19 +338,34 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
           <motion.div
             key="tracks-grid"
             className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'space-y-4'}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ 
+              duration: 0.4,
+              ease: "easeOut",
+              staggerChildren: 0.05
+            }}
           >
-            {filteredTracks?.map(track => (
-              <TrackCard
+            {filteredTracks?.map((track, index) => (
+              <motion.div
                 key={track.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ 
+                  duration: 0.3,
+                  delay: index * 0.05,
+                  ease: "easeOut"
+                }}
+              >
+                <TrackCard
                 track={track}
                 onPlay={handlePlayTrack}
                 onPause={() => setCurrentlyPlaying(null)}
                 onEdit={handleTrackEdit}
                 isPlaying={currentlyPlaying === track.id}
               />
+              </motion.div>
             ))}
           </motion.div>
         )}

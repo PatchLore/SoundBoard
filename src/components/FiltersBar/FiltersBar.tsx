@@ -4,6 +4,7 @@ import { FilterOptions } from '../../types/track';
 import { useFilterPersistence } from '../../hooks/useFilterPersistence';
 import ResetAllButton from './ResetAllButton';
 import ActiveFilterChip from './ActiveFilterChip';
+import { SkeletonCard } from '../Skeleton';
 
 interface FiltersBarProps {
   categories: Array<{ id: string; name: string; trackCount: number }>;
@@ -48,12 +49,30 @@ const FiltersBar: React.FC<FiltersBarProps> = ({
   if (!isLoaded) {
     return (
       <div className={`bg-stream-gray rounded-xl p-6 border border-stream-light/20 ${className}`}>
-        <div className="animate-pulse">
-          <div className="h-4 bg-stream-darker rounded w-1/4 mb-4"></div>
-          <div className="h-10 bg-stream-darker rounded mb-4"></div>
+        <div className="space-y-4">
+          {/* Search and Reset Controls Skeleton */}
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1 h-12 bg-stream-darker rounded-lg animate-pulse"></div>
+            <div className="h-10 w-24 bg-stream-darker rounded-lg animate-pulse"></div>
+          </div>
+          
+          {/* Category Filter Skeleton */}
+          <div className="space-y-3">
+            <div className="h-6 bg-stream-darker rounded w-24 animate-pulse"></div>
+            <div className="flex flex-wrap gap-3">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="h-8 bg-stream-darker rounded w-20 animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Advanced Filters Skeleton */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-10 bg-stream-darker rounded"></div>
+              <div key={i} className="space-y-2">
+                <div className="h-4 bg-stream-darker rounded w-16 animate-pulse"></div>
+                <div className="h-10 bg-stream-darker rounded animate-pulse"></div>
+              </div>
             ))}
           </div>
         </div>
