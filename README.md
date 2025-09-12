@@ -32,10 +32,27 @@ A React + Tailwind CSS web application featuring a Stream Soundboard and Overlay
 
 2. **Start the development server:**
    ```bash
-   npm start
+   vercel dev
+   ```
+   
+   **Fallback (if Vercel CLI not available):**
+   ```bash
+   npm run dev
    ```
 
-3. **Open your browser:**
+3. **Set up environment variables (optional):**
+   Create `.env.local` file:
+   ```bash
+   # Server-side (API routes)
+   AUTHORIZED_EMAIL=your@email.com
+   AUTHORIZED_PASSWORD=your-secure-password
+   UPLOAD_WHITELIST=your@email.com,teammate@email.com
+   
+   # Client-side (if using analytics)
+   VITE_ANALYTICS_ENDPOINT=https://your-analytics-api.com
+   ```
+
+4. **Open your browser:**
    Navigate to `http://localhost:3000`
 
 ## 🔧 Environment Variables
@@ -71,21 +88,15 @@ VITE_ANALYTICS_ENDPOINT=https://your-analytics-api.com
 - ✅ Only `VITE_` prefixed variables are accessible client-side
 - ⚠️ Never put sensitive data in `VITE_` variables
 
-## 🧪 Testing
+## 🧪 How to Run Tests
 
 ### Unit & Integration Tests
-Run the comprehensive test suite:
 ```bash
 npm test
 ```
 
 ### End-to-End Tests
-We use Cypress for E2E testing to simulate real user workflows:
-
 ```bash
-# Install Cypress (if not already installed)
-npm install
-
 # Run E2E tests in headless mode
 npm run test:e2e
 
@@ -215,7 +226,8 @@ The Overlay Jukebox is designed specifically for OBS browser source:
 
 ### Available Scripts
 
-- `npm start` - Start development server
+- `vercel dev` - Start development server (recommended)
+- `npm run dev` - Start development server (fallback)
 - `npm run build` - Build for production
 - `npm test` - Run tests
 - `npm run eject` - Eject from Create React App
