@@ -6,9 +6,7 @@ import AgencyDashboard from './components/AgencyDashboard';
 import ProfessionalAudioDashboard from './components/ProfessionalAudioDashboard';
 import IntegrationDashboard from './components/IntegrationDashboard';
 import StreamerMode from './components/StreamerMode';
-import AuthFlow from './components/AuthFlow';
-import PricingPage from './components/PricingPage';
-import HomePage from './components/HomePage';
+import AuthLogin from './components/AuthLogin';
 import authService, { User } from './services/authService';
 // Enhanced music library with role-based access control
 
@@ -16,38 +14,27 @@ function App() {
   const [currentPage, setCurrentPage] = useState<'soundboard' | 'jukebox' | 'agency' | 'professional' | 'integrations'>('soundboard');
   const [isStreamerMode, setIsStreamerMode] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [showAuth, setShowAuth] = useState(false);
-  const [showPricing, setShowPricing] = useState(false);
-  const [showHomePage, setShowHomePage] = useState(true);
+  const [showAuth, setShowAuth] = useState(true);
 
   // Check for existing user on app load
   useEffect(() => {
     const user = authService.getCurrentUser();
     if (user) {
       setCurrentUser(user);
+      setShowAuth(false);
       // Route to appropriate dashboard based on user type
       if (user.userType === 'agency') {
         setCurrentPage('agency');
       } else {
         setCurrentPage('soundboard');
       }
-    } else {
-      setShowAuth(true);
     }
   }, []);
-
-  // Handle HomePage signup
-  const handleHomePageSignup = (userType: 'streamer' | 'agency', plan: string, email: string) => {
-    console.log('HomePage signup:', { userType, plan, email });
-    setShowHomePage(false);
-    setShowAuth(true);
-  };
 
   // Handle authentication success
   const handleAuthSuccess = (user: User) => {
     setCurrentUser(user);
     setShowAuth(false);
-    setShowHomePage(false);
     // Route to appropriate dashboard
     if (user.userType === 'agency') {
       setCurrentPage('agency');
@@ -64,31 +51,11 @@ function App() {
     setCurrentPage('soundboard');
   };
 
-  // Show HomePage if requested
-  if (showHomePage) {
-    return (
-      <HomePage onSignup={handleHomePageSignup} />
-    );
-  }
-
-  // Show auth flow if no user
+  // Show auth login if no user
   if (showAuth) {
     return (
-      <AuthFlow 
+      <AuthLogin 
         onAuthSuccess={handleAuthSuccess}
-        onShowPricing={() => setShowPricing(true)}
-      />
-    );
-  }
-
-  // Show pricing page if requested
-  if (showPricing) {
-    return (
-      <PricingPage 
-        onSelectPlan={(userType, plan) => {
-          setShowPricing(false);
-          setShowAuth(true);
-        }}
       />
     );
   }
@@ -127,6 +94,106 @@ function App() {
                     className="text-gray-400 hover:text-white transition-colors text-sm"
                   >
                     Logout
+                  </button>
+                  {/* Testing: Quick switch to agency mode */}
+                  {currentUser.userType === 'streamer' && (
+                    <button
+                      onClick={() => {
+                        authService.switchToAgencyMode();
+                        window.location.reload();
+                      }}
+                      className="text-yellow-400 hover:text-yellow-300 transition-colors text-sm ml-2"
+                      title="Switch to Agency Mode for Testing"
+                    >
+                      🧪 Agency Test
+                    </button>
+                  )}
+                  {/* Testing: Quick switch back to streamer mode */}
+                  {currentUser.userType === 'agency' && (
+                    <button
+                      onClick={() => {
+                        authService.switchToStreamerMode();
+                        window.location.reload();
+                      }}
+                      className="text-blue-400 hover:text-blue-300 transition-colors text-sm ml-2"
+                      title="Switch Back to Streamer Mode"
+                    >
+                      🧪 Streamer Test
+                    </button>
+                  )}
+                  {/* Demo Data Button */}
+                  <button
+                    onClick={() => {
+                      // Add demo tracks and streamers
+                      const demoTracks = [
+                        {
+                          id: 'demo_1',
+                          title: 'Epic Boss Battle',
+                          artist: 'Demo Artist',
+                          duration: 180,
+                          audioUrl: '/tracks/demo-1.mp3',
+                          category: 'boss-battle',
+                          subcategory: 'demo',
+                          mood: 'epic',
+                          energy: 5,
+                          bpm: 140,
+                          key: 'D minor',
+                          tags: ['demo', 'boss-battle', 'epic'],
+                          description: 'Demo track for testing',
+                          streamSafe: true,
+                          loopFriendly: true,
+                          hasIntro: false,
+                          hasOutro: false,
+                          dmcaSafe: true,
+                          uploadDate: new Date().toISOString(),
+                          uploadedBy: 'demo',
+                          approved: true,
+                          featured: false,
+                          usageTracking: { usageCount: 0, lastUsed: undefined }
+                        },
+                        {
+                          id: 'demo_2',
+                          title: 'Chill Gaming Vibes',
+                          artist: 'Demo Artist',
+                          duration: 240,
+                          audioUrl: '/tracks/demo-2.mp3',
+                          category: 'chill-gaming',
+                          subcategory: 'demo',
+                          mood: 'chill',
+                          energy: 2,
+                          bpm: 80,
+                          key: 'C major',
+                          tags: ['demo', 'chill', 'gaming'],
+                          description: 'Demo track for testing',
+                          streamSafe: true,
+                          loopFriendly: true,
+                          hasIntro: false,
+                          hasOutro: false,
+                          dmcaSafe: true,
+                          uploadDate: new Date().toISOString(),
+                          uploadedBy: 'demo',
+                          approved: true,
+                          featured: false,
+                          usageTracking: { usageCount: 0, lastUsed: undefined }
+                        }
+                      ];
+                      
+                      // Save to localStorage
+                      localStorage.setItem('demo_tracks', JSON.stringify(demoTracks));
+                      
+                      // Add demo streamers
+                      const demoStreamers = [
+                        { id: 'demo_1', name: 'Demo Streamer 1', email: 'demo1@example.com' },
+                        { id: 'demo_2', name: 'Demo Streamer 2', email: 'demo2@example.com' }
+                      ];
+                      localStorage.setItem('demo_streamers', JSON.stringify(demoStreamers));
+                      
+                      alert('Demo data added! Refresh the page to see it.');
+                    }}
+                    className="text-green-400 hover:text-green-300 transition-colors text-sm ml-2"
+                    title="Add Demo Data for Testing"
+                  >
+                    🎯 Add Demo Data
                   </button>
                 </div>
                 {/* Streamer Mode Toggle - Only for streamers */}

@@ -100,3 +100,12 @@ Cypress.Commands.add('addTrackToPlaylist', (trackSelector, playlistName) => {
   cy.get(`[data-testid="playlist-option-${playlistName}"]`).click()
   cy.get('[data-testid="confirm-add-button"]').click()
 })
+
+
+
+
+
+
+
+
+

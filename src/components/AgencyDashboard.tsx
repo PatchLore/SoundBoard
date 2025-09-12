@@ -7,6 +7,7 @@ import AnalyticsDashboard from './AnalyticsDashboard';
 import BrandingCustomization from './BrandingCustomization';
 import PlaceholderAvatar from './PlaceholderAvatar';
 import ClientManagement from './ClientManagement';
+import AddStreamerForm from './AddStreamerForm';
 import authService, { FeatureFlags } from '../services/authService';
 
 const AgencyDashboard: React.FC = () => {
@@ -16,6 +17,7 @@ const AgencyDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedStreamer, setSelectedStreamer] = useState<Streamer | null>(null);
   const [showStreamerProfile, setShowStreamerProfile] = useState(false);
+  const [showAddStreamerModal, setShowAddStreamerModal] = useState(false);
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags | null>(null);
 
   // Load feature flags
@@ -24,6 +26,41 @@ const AgencyDashboard: React.FC = () => {
     setFeatureFlags(flags);
     console.log('🔒 AgencyDashboard feature flags:', flags);
   }, []);
+
+  // Function to add a new streamer
+  const handleAddStreamer = (streamerData: { name: string; email: string }) => {
+    const newStreamer: Streamer = {
+      id: `streamer_${Date.now()}`,
+      name: streamerData.name,
+      email: streamerData.email,
+      agencyId: agency?.id || 'agency_001',
+      avatar: undefined,
+      isActive: true,
+      soundboardConfig: {
+        favoriteTracks: [],
+        customCategories: [],
+        volumeDefaults: 75,
+        autoplaySettings: false,
+        defaultMood: 'energetic',
+        defaultGenre: 'electronic',
+        defaultEnergyLevel: 'high',
+        theme: 'dark'
+      },
+      usageStats: {
+        totalPlayTime: 0,
+        tracksPlayed: 0,
+        lastActive: new Date().toISOString(),
+        favoriteMoods: [],
+        favoriteGenres: [],
+        peakUsageHours: []
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    setStreamers(prev => [...prev, newStreamer]);
+    setShowAddStreamerModal(false);
+  };
 
   // Mock data for development
   useEffect(() => {
@@ -42,7 +79,49 @@ const AgencyDashboard: React.FC = () => {
       features: ['upload_tracks', 'manage_users', 'analytics']
     };
 
-    const mockStreamers: Streamer[] = [
+    // Load demo streamers from localStorage if available
+    const demoStreamersData = localStorage.getItem('demo_streamers');
+    let mockStreamers: Streamer[] = [];
+    
+    if (demoStreamersData) {
+      try {
+        const demoStreamers = JSON.parse(demoStreamersData);
+        mockStreamers = demoStreamers.map((demo: any) => ({
+          id: demo.id,
+          name: demo.name,
+          email: demo.email,
+          agencyId: 'agency_001',
+          avatar: undefined,
+          isActive: true,
+          soundboardConfig: {
+            favoriteTracks: [],
+            customCategories: [],
+            volumeDefaults: 75,
+            autoplaySettings: false,
+            defaultMood: 'energetic',
+            defaultGenre: 'electronic',
+            defaultEnergyLevel: 'high',
+            theme: 'dark'
+          },
+          usageStats: {
+            totalPlayTime: 0,
+            tracksPlayed: 0,
+            lastActive: new Date().toISOString(),
+            favoriteMoods: [],
+            favoriteGenres: [],
+            peakUsageHours: []
+          },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }));
+      } catch (e) {
+        console.error('Failed to parse demo streamers:', e);
+      }
+    }
+
+    // Add default mock streamers if no demo data
+    if (mockStreamers.length === 0) {
+      mockStreamers = [
       {
         id: 'streamer_001',
         name: 'Alex Gaming',
@@ -100,6 +179,7 @@ const AgencyDashboard: React.FC = () => {
         updatedAt: new Date().toISOString()
       }
     ];
+  }
 
     // Apply plan-based client limits
     let limitedStreamers = mockStreamers;
@@ -203,7 +283,10 @@ const AgencyDashboard: React.FC = () => {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-gray-300">Active Streamers: {streamers.filter(s => s.isActive).length}</span>
-              <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+              <button 
+                onClick={() => setShowAddStreamerModal(true)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
                 Add Streamer
               </button>
             </div>
@@ -432,6 +515,37 @@ const AgencyDashboard: React.FC = () => {
             onSave={handleStreamerSave}
             onClose={handleStreamerClose}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Add Streamer Modal */}
+      <AnimatePresence>
+        {showAddStreamerModal && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-gray-900 rounded-2xl p-6 w-full max-w-md"
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white">Add New Streamer</h2>
+                <button
+                  onClick={() => setShowAddStreamerModal(false)}
+                  className="text-gray-400 hover:text-white transition-colors text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <AddStreamerForm onSubmit={handleAddStreamer} onCancel={() => setShowAddStreamerModal(false)} />
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

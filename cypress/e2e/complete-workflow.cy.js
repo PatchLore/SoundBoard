@@ -196,3 +196,12 @@ describe('Complete Manual QA Workflow', () => {
       .and('not.eq', 'rgba(0, 0, 0, 0)')
   })
 })
+
+
+
+
+
+
+
+
+

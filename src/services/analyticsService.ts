@@ -48,16 +48,80 @@ class AnalyticsService {
   constructor() {
     this.sessionId = this.generateSessionId();
     this.isProduction = process.env.NODE_ENV === 'production';
-    this.analyticsEndpoint = process.env.REACT_APP_ANALYTICS_ENDPOINT || '/api/analytics';
+    this.analyticsEndpoint = process.env.REACT_APP_ANALYTICS_ENDPOINT || '';
     
-    // Only track in production
-    if (this.isProduction) {
-      this.initializePerformanceTracking();
+    // Track in both production and development for testing
+    this.initializePerformanceTracking();
+    
+    // Add sample data for development/testing
+    if (!this.isProduction) {
+      this.addSampleData();
     }
   }
 
   private generateSessionId(): string {
     return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }
+
+  private addSampleData() {
+    // Add sample performance metrics
+    this.performanceMetrics = {
+      jsonLoadTime: 125,
+      trackProcessingTime: 340,
+      totalLoadTime: 465,
+      memoryUsage: 45 * 1024 * 1024, // 45MB
+      tracksLoaded: 12,
+      totalTracks: 15,
+      loadSuccess: true,
+      timeToInteractive: 1200,
+      firstContentfulPaint: 800
+    };
+
+    // Add sample events
+    this.events = [
+      {
+        event: 'app_load',
+        timestamp: Date.now() - 300000, // 5 minutes ago
+        sessionId: this.sessionId,
+        data: this.performanceMetrics
+      },
+      {
+        event: 'user_interaction',
+        timestamp: Date.now() - 240000, // 4 minutes ago
+        sessionId: this.sessionId,
+        data: {
+          interaction: 'track_play',
+          data: { trackId: 'track_001', trackName: 'Epic Boss Battle' }
+        }
+      },
+      {
+        event: 'user_interaction',
+        timestamp: Date.now() - 180000, // 3 minutes ago
+        sessionId: this.sessionId,
+        data: {
+          interaction: 'track_pause',
+          data: { trackId: 'track_001', trackName: 'Epic Boss Battle' }
+        }
+      },
+      {
+        event: 'user_interaction',
+        timestamp: Date.now() - 120000, // 2 minutes ago
+        sessionId: this.sessionId,
+        data: {
+          interaction: 'category_filter',
+          data: { category: 'gaming-action', filterCount: 8 }
+        }
+      },
+      {
+        event: 'user_interaction',
+        timestamp: Date.now() - 60000, // 1 minute ago
+        sessionId: this.sessionId,
+        data: {
+          interaction: 'volume_change',
+          data: { volume: 75, previousVolume: 60 }
+        }
+      }
+    ];
   }
 
   private initializePerformanceTracking() {
@@ -100,7 +164,7 @@ class AnalyticsService {
     loadSuccess: boolean;
     errorType?: string;
   }) {
-    if (!this.isProduction) {
+    if (!this.isProduction || !this.analyticsEndpoint) {
       console.log('📊 Analytics (dev): App load tracked', metrics);
       return;
     }
@@ -121,7 +185,7 @@ class AnalyticsService {
   }
 
   public trackUserInteraction(interaction: string, data?: any) {
-    if (!this.isProduction) {
+    if (!this.isProduction || !this.analyticsEndpoint) {
       console.log('📊 Analytics (dev): User interaction tracked', { interaction, data });
       return;
     }
@@ -147,7 +211,7 @@ class AnalyticsService {
     details: string;
     metrics: any;
   }) {
-    if (!this.isProduction) {
+    if (!this.isProduction || !this.analyticsEndpoint) {
       console.log('📊 Analytics (dev): Performance issue tracked', issue);
       return;
     }
@@ -173,7 +237,7 @@ class AnalyticsService {
     stack?: string;
     context?: any;
   }) {
-    if (!this.isProduction) {
+    if (!this.isProduction || !this.analyticsEndpoint) {
       console.log('📊 Analytics (dev): Error tracked', error);
       return;
     }
@@ -231,6 +295,10 @@ class AnalyticsService {
 
   public getEvents(): AnalyticsEvent[] {
     return this.events;
+  }
+
+  public getPerformanceMetrics(): Partial<PerformanceMetrics> {
+    return { ...this.performanceMetrics };
   }
 
   public flushEvents() {

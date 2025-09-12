@@ -60,12 +60,16 @@ class UnifiedAudioController {
   private currentLoopCount: number = 0;
 
   constructor() {
-    this.initializeAudioElement();
+    // Skip DOM work in non-browser contexts
+    if (typeof document !== 'undefined') {
+      this.initializeAudioElement();
+    }
   }
 
   private initializeAudioElement() {
     // Create hidden audio element
-    this.audioElement = document.createElement('audio');
+    this.audioElement = (typeof document !== 'undefined') ? document.createElement('audio') : null;
+    if (!this.audioElement) return;
     this.audioElement.style.display = 'none';
     this.audioElement.preload = 'metadata';
     
@@ -78,7 +82,9 @@ class UnifiedAudioController {
     this.audioElement.addEventListener('pause', this.handlePause.bind(this));
     
     // Add to DOM
-    document.body.appendChild(this.audioElement);
+    if (typeof document !== 'undefined') {
+      document.body.appendChild(this.audioElement);
+    }
     
     // Set initial volume
     this.setVolume(this.volume);

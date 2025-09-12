@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Track } from '../../types/track';
 import { STREAMING_CATEGORIES } from '../../data/categories';
 import trackManagementService from '../../services/trackManagementService';
+import { useAuth } from '../../hooks/useAuth';
 
 interface TrackUploaderProps {
   onTrackUpload: (track: Track) => void;
@@ -10,6 +11,7 @@ interface TrackUploaderProps {
 }
 
 const TrackUploader: React.FC<TrackUploaderProps> = ({ onTrackUpload, onClose }) => {
+  const { user, isAgency } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -57,6 +59,11 @@ const TrackUploader: React.FC<TrackUploaderProps> = ({ onTrackUpload, onClose })
     }
   }, []);
 
+  // Hide UI unless user is authenticated and has agency role
+  if (!user || !isAgency) {
+    return null; // Don't render uploader for unauthorized users
+  }
+
   const handleFileSelect = (file: File) => {
     if (file.type.includes('audio/')) {
       setUploadedFile(file);
@@ -95,21 +102,43 @@ const TrackUploader: React.FC<TrackUploaderProps> = ({ onTrackUpload, onClose })
     setUploadProgress(0);
 
     try {
-      // Simulate upload progress
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 100);
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('file', uploadedFile);
+      formData.append('metadata', JSON.stringify(trackMetadata));
 
-      // Upload track using the service
-      const newTrack = await trackManagementService.uploadTrack(trackMetadata, uploadedFile);
+      // Upload to backend API
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
+
+      // Create track object for local storage
+      const newTrack: Track = {
+        ...trackMetadata,
+        id: Date.now().toString(),
+        audioUrl: URL.createObjectURL(uploadedFile), // Local preview
+        duration: 0, // Will be calculated
+        uploadDate: new Date().toISOString(),
+        uploadedBy: user?.email || 'unknown',
+        approved: true,
+        usageTracking: {
+          usageCount: 0,
+          lastUsed: undefined
+        }
+      } as Track;
+
+      // Save to local storage using the existing uploadTrack method
+      await trackManagementService.uploadTrack(trackMetadata, uploadedFile);
       
-      clearInterval(progressInterval);
       setUploadProgress(100);
 
       // Wait a bit to show completion
@@ -120,7 +149,7 @@ const TrackUploader: React.FC<TrackUploaderProps> = ({ onTrackUpload, onClose })
 
     } catch (error) {
       console.error('Upload failed:', error);
-      alert('Upload failed. Please try again.');
+      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsUploading(false);
       setUploadProgress(0);

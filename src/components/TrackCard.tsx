@@ -1,12 +1,13 @@
 import { useState, memo } from 'react';
 import { motion } from 'framer-motion';
 import { Track } from '../types/track';
-import { audioController } from '../services/audioController';
+import unifiedAudioController from '../services/unifiedAudioController';
 
 interface TrackCardProps {
   track: Track;
   onPlay?: (track: Track) => void;
   onPause?: (track: Track) => void;
+  onEdit?: (track: Track) => void;
   isPlaying?: boolean;
   showActions?: boolean;
   compact?: boolean;
@@ -16,6 +17,7 @@ const TrackCard: React.FC<TrackCardProps> = memo(({
   track,
   onPlay,
   onPause,
+  onEdit,
   isPlaying = false,
   showActions = true,
   compact = false
@@ -26,10 +28,10 @@ const TrackCard: React.FC<TrackCardProps> = memo(({
   // Handle play/pause
   const handlePlayPause = () => {
     if (isPlaying) {
-      audioController.stop();
+      unifiedAudioController.stop();
       onPause?.(track);
     } else {
-      audioController.playTrack(track).catch(console.error);
+      unifiedAudioController.playTrack(track).catch(console.error);
       onPlay?.(track);
     }
   };
@@ -186,6 +188,21 @@ const TrackCard: React.FC<TrackCardProps> = memo(({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
             </motion.button>
+
+            {/* Edit Button */}
+            {onEdit && (
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => onEdit(track)}
+                className="p-2 bg-yellow-600 text-white hover:bg-yellow-700 rounded-lg transition-all duration-200"
+                title="Edit track"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </motion.button>
+            )}
 
             {/* Download Button */}
             <motion.button

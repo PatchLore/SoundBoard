@@ -61,6 +61,18 @@ class AuthService {
     aiLimit: -1 // unlimited
   };
 
+  private readonly DEMO_AGENCY_USER: AgencyUser = {
+    id: 'demo-agency-123',
+    email: 'dnbmashup1@gmail.com',
+    userType: 'agency',
+    plan: 'enterprise',
+    isAuthenticated: true,
+    createdAt: new Date(),
+    lastLogin: new Date(),
+    streamerLimit: -1, // unlimited
+    clients: []
+  };
+
   // Get current user from localStorage
   getCurrentUser(): User | null {
     try {
@@ -79,6 +91,16 @@ class AuthService {
     }
   }
 
+  // For testing: Switch to agency mode
+  switchToAgencyMode(): void {
+    this.setUser(this.DEMO_AGENCY_USER);
+  }
+
+  // For testing: Switch back to streamer mode
+  switchToStreamerMode(): void {
+    this.setUser(this.DEMO_USER);
+  }
+
   // Set user data in localStorage
   setUser(user: User): void {
     try {
@@ -90,11 +112,17 @@ class AuthService {
 
   // Create a new user account
   createUser(email: string, userType: 'streamer' | 'agency', plan: string): User {
+    // For testing purposes, allow agency access without payment verification
+    let actualPlan = plan;
+    if (userType === 'agency' && plan === 'enterprise') {
+      actualPlan = 'enterprise'; // Allow enterprise access for testing
+    }
+    
     const user: User = {
       id: this.generateId(),
       email,
       userType,
-      plan,
+      plan: actualPlan,
       isAuthenticated: true,
       createdAt: new Date(),
       lastLogin: new Date()

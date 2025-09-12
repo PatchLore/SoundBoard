@@ -362,9 +362,12 @@ describe('EnhancedMusicLibrary Component', () => {
         expect(screen.getByText('Chill Gaming Track')).toBeInTheDocument();
         expect(screen.getByText('Chill Artist')).toBeInTheDocument();
         expect(screen.getByText('🎮')).toBeInTheDocument(); // Category icon
-        expect(screen.getByText('chill')).toBeInTheDocument(); // Mood
-        expect(screen.getByText('⭐⭐')).toBeInTheDocument(); // Energy level
+        expect(screen.getByText('Energy: 2/5')).toBeInTheDocument(); // Energy level
       });
+      
+      // Check for mood and tags separately to avoid conflicts
+      const moodElements = screen.getAllByText('chill');
+      expect(moodElements.length).toBeGreaterThan(0);
     });
 
     test('should show track duration in readable format', async () => {
@@ -376,8 +379,8 @@ describe('EnhancedMusicLibrary Component', () => {
       });
       
       await waitFor(() => {
-        expect(screen.getByText('3:00')).toBeInTheDocument();
-        expect(screen.getByText('4:00')).toBeInTheDocument();
+        expect(screen.getByText('Duration: 3:00')).toBeInTheDocument();
+        expect(screen.getByText('Duration: 4:00')).toBeInTheDocument();
       });
     });
   });
