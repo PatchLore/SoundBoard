@@ -38,6 +38,39 @@ A React + Tailwind CSS web application featuring a Stream Soundboard and Overlay
 3. **Open your browser:**
    Navigate to `http://localhost:3000`
 
+## 🔧 Environment Variables
+
+This Vite-based project follows specific conventions for environment variables:
+
+### Client-Side Variables (Exposed to Browser)
+- **Must** use `VITE_` prefix
+- Access via `import.meta.env.VITE_VARIABLE_NAME`
+- Examples: `VITE_API_URL`, `VITE_ANALYTICS_ENDPOINT`
+
+### Server-Side Variables (API Routes Only)
+- **No** prefix required
+- Access via `process.env.VARIABLE_NAME`
+- Examples: `AUTHORIZED_EMAIL`, `UPLOAD_WHITELIST`
+
+### Required Environment Variables
+
+Create a `.env.local` file in your project root:
+
+```bash
+# Server-side (API routes)
+AUTHORIZED_EMAIL=your@email.com
+AUTHORIZED_PASSWORD=your-secure-password
+UPLOAD_WHITELIST=your@email.com,teammate@email.com
+
+# Client-side (if using analytics)
+VITE_ANALYTICS_ENDPOINT=https://your-analytics-api.com
+```
+
+### Security Notes
+- ✅ Server-side variables are never exposed to the browser
+- ✅ Only `VITE_` prefixed variables are accessible client-side
+- ⚠️ Never put sensitive data in `VITE_` variables
+
 ## 🧪 Testing
 
 ### Unit & Integration Tests
@@ -107,8 +140,8 @@ The app runs in **Demo Mode** by default, which means:
 
 ### Future AI Integration
 When you're ready to add AI music generation:
-1. **Add your API keys** to the `.env` file
-2. **Set `REACT_APP_DEMO_MODE=false`**
+1. **Add your API keys** to the `.env.local` file
+2. **Set `VITE_DEMO_MODE=false`**
 3. **The app will automatically switch** to AI generation mode
 
 ## 🎨 Customization
