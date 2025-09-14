@@ -7,6 +7,7 @@ import ProfessionalAudioDashboard from './components/ProfessionalAudioDashboard'
 import IntegrationDashboard from './components/IntegrationDashboard';
 import StreamerMode from './components/StreamerMode';
 import AuthLogin from './components/AuthLogin';
+import { MiniPlayer } from './components/Player';
 import authService, { User } from './services/authService';
 // Enhanced music library with role-based access control
 
@@ -379,6 +380,11 @@ function App() {
           onToggle={() => setIsStreamerMode(false)} 
         />
       )}
+
+      {/* Global Mini Player */}
+      <div className="fixed bottom-4 left-4 right-4 z-50">
+        <MiniPlayer showVolume={false} />
+      </div>
     </>
   );
 }

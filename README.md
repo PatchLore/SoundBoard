@@ -32,71 +32,27 @@ A React + Tailwind CSS web application featuring a Stream Soundboard and Overlay
 
 2. **Start the development server:**
    ```bash
-   vercel dev
-   ```
-   
-   **Fallback (if Vercel CLI not available):**
-   ```bash
-   npm run dev
+   npm start
    ```
 
-3. **Set up environment variables (optional):**
-   Create `.env.local` file:
-   ```bash
-   # Server-side (API routes)
-   AUTHORIZED_EMAIL=your@email.com
-   AUTHORIZED_PASSWORD=your-secure-password
-   UPLOAD_WHITELIST=your@email.com,teammate@email.com
-   
-   # Client-side (if using analytics)
-   VITE_ANALYTICS_ENDPOINT=https://your-analytics-api.com
-   ```
-
-4. **Open your browser:**
+3. **Open your browser:**
    Navigate to `http://localhost:3000`
 
-## 🔧 Environment Variables
-
-This Vite-based project follows specific conventions for environment variables:
-
-### Client-Side Variables (Exposed to Browser)
-- **Must** use `VITE_` prefix
-- Access via `import.meta.env.VITE_VARIABLE_NAME`
-- Examples: `VITE_API_URL`, `VITE_ANALYTICS_ENDPOINT`
-
-### Server-Side Variables (API Routes Only)
-- **No** prefix required
-- Access via `process.env.VARIABLE_NAME`
-- Examples: `AUTHORIZED_EMAIL`, `UPLOAD_WHITELIST`
-
-### Required Environment Variables
-
-Create a `.env.local` file in your project root:
-
-```bash
-# Server-side (API routes)
-AUTHORIZED_EMAIL=your@email.com
-AUTHORIZED_PASSWORD=your-secure-password
-UPLOAD_WHITELIST=your@email.com,teammate@email.com
-
-# Client-side (if using analytics)
-VITE_ANALYTICS_ENDPOINT=https://your-analytics-api.com
-```
-
-### Security Notes
-- ✅ Server-side variables are never exposed to the browser
-- ✅ Only `VITE_` prefixed variables are accessible client-side
-- ⚠️ Never put sensitive data in `VITE_` variables
-
-## 🧪 How to Run Tests
+## 🧪 Testing
 
 ### Unit & Integration Tests
+Run the comprehensive test suite:
 ```bash
 npm test
 ```
 
 ### End-to-End Tests
+We use Cypress for E2E testing to simulate real user workflows:
+
 ```bash
+# Install Cypress (if not already installed)
+npm install
+
 # Run E2E tests in headless mode
 npm run test:e2e
 
@@ -151,8 +107,8 @@ The app runs in **Demo Mode** by default, which means:
 
 ### Future AI Integration
 When you're ready to add AI music generation:
-1. **Add your API keys** to the `.env.local` file
-2. **Set `VITE_DEMO_MODE=false`**
+1. **Add your API keys** to the `.env` file
+2. **Set `REACT_APP_DEMO_MODE=false`**
 3. **The app will automatically switch** to AI generation mode
 
 ## 🎨 Customization
@@ -226,8 +182,7 @@ The Overlay Jukebox is designed specifically for OBS browser source:
 
 ### Available Scripts
 
-- `vercel dev` - Start development server (recommended)
-- `npm run dev` - Start development server (fallback)
+- `npm start` - Start development server
 - `npm run build` - Build for production
 - `npm test` - Run tests
 - `npm run eject` - Eject from Create React App

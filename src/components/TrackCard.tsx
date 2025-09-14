@@ -125,7 +125,7 @@ const TrackCard: React.FC<TrackCardProps> = memo(({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handlePlayPause}
-            className={`p-3 rounded-xl font-medium transition-all duration-200 ${
+            className={`w-10 h-10 min-w-10 min-h-10 flex items-center justify-center rounded-xl font-medium transition-all duration-200 ${
               isPlaying
                 ? 'bg-red-600 text-white hover:bg-red-700'
                 : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -149,7 +149,7 @@ const TrackCard: React.FC<TrackCardProps> = memo(({
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handleLike}
-              className={`p-2 rounded-lg transition-all duration-200 ${
+              className={`w-10 h-10 min-w-10 min-h-10 flex items-center justify-center rounded-lg transition-all duration-200 ${
                 isLiked
                   ? 'bg-red-600/20 text-red-400 border border-red-600/30'
                   : 'bg-gray-700 text-gray-400 hover:text-white hover:bg-gray-600'
@@ -165,7 +165,7 @@ const TrackCard: React.FC<TrackCardProps> = memo(({
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handlePlaylistToggle}
-              className={`p-2 rounded-lg transition-all duration-200 ${
+              className={`w-10 h-10 min-w-10 min-h-10 flex items-center justify-center rounded-lg transition-all duration-200 ${
                 isInPlaylist
                   ? 'bg-blue-600/20 text-blue-400 border border-blue-600/30'
                   : 'bg-gray-700 text-gray-400 hover:text-white hover:bg-gray-600'

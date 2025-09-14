@@ -137,7 +137,7 @@ const OverlayJukebox: React.FC = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={isPlaying ? handlePause : handlePlay}
-            className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl hover:bg-blue-700"
+            className="px-8 py-4 min-w-16 min-h-16 bg-blue-600 text-white rounded-2xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl hover:bg-blue-700"
           >
             <div className="flex items-center gap-2">
               {isPlaying ? (

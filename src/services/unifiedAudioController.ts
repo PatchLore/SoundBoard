@@ -22,6 +22,7 @@ export interface AudioState {
   duration: number;
   isLooping: boolean;
   loopCount: number;
+  isBuffering: boolean;
 }
 
 export interface AudioEventCallbacks {
@@ -33,6 +34,8 @@ export interface AudioEventCallbacks {
   onError?: (error: string) => void;
   onFadeStart?: (type: 'in' | 'out', duration: number) => void;
   onFadeComplete?: (type: 'in' | 'out') => void;
+  onBufferingStart?: () => void;
+  onBufferingEnd?: () => void;
 }
 
 class UnifiedAudioController {
@@ -42,6 +45,7 @@ class UnifiedAudioController {
   private volume: number = 50;
   private currentTime: number = 0;
   private duration: number = 0;
+  private isBuffering: boolean = false;
   private eventCallbacks: AudioEventCallbacks = {};
   private stopListeners: Map<string, () => void> = new Map();
   private fadeInterval: number | null = null;
@@ -80,6 +84,9 @@ class UnifiedAudioController {
     this.audioElement.addEventListener('error', this.handleError.bind(this));
     this.audioElement.addEventListener('play', this.handlePlay.bind(this));
     this.audioElement.addEventListener('pause', this.handlePause.bind(this));
+    this.audioElement.addEventListener('waiting', this.handleWaiting.bind(this));
+    this.audioElement.addEventListener('canplay', this.handleCanPlay.bind(this));
+    this.audioElement.addEventListener('stalled', this.handleStalled.bind(this));
     
     // Add to DOM
     if (typeof document !== 'undefined') {
@@ -267,7 +274,8 @@ class UnifiedAudioController {
       currentTime: this.currentTime,
       duration: this.duration,
       isLooping: this.settings.loopEnabled,
-      loopCount: this.currentLoopCount
+      loopCount: this.currentLoopCount,
+      isBuffering: this.isBuffering
     };
   }
 
@@ -285,6 +293,10 @@ class UnifiedAudioController {
 
   public getDuration(): number {
     return this.duration;
+  }
+
+  public isCurrentlyBuffering(): boolean {
+    return this.isBuffering;
   }
 
   // Fade effects
@@ -518,6 +530,21 @@ class UnifiedAudioController {
   private handlePause(): void {
     this.isPlaying = false;
     this.notifyEventCallbacks('onPlayStateChange', this.isPlaying);
+  }
+
+  private handleWaiting(): void {
+    this.isBuffering = true;
+    this.notifyEventCallbacks('onBufferingStart');
+  }
+
+  private handleCanPlay(): void {
+    this.isBuffering = false;
+    this.notifyEventCallbacks('onBufferingEnd');
+  }
+
+  private handleStalled(): void {
+    this.isBuffering = true;
+    this.notifyEventCallbacks('onBufferingStart');
   }
 
   private notifyEventCallbacks(event: keyof AudioEventCallbacks, ...args: any[]): void {
