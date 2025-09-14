@@ -10,6 +10,7 @@ import TrackUploader from './admin/TrackUploader';
 import BulkUploadModal from './BulkUploadModal';
 import ImportPlaylistModal from './ImportPlaylistModal';
 import TrackEditModal from './TrackEditModal';
+import { LiveRegion, useLiveRegion } from './A11y';
 
 interface EnhancedMusicLibraryProps {
   userRole: UserRole;
@@ -31,6 +32,9 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
   const [editingTrack, setEditingTrack] = useState<Track | null>(null);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  // Live region for accessibility announcements
+  const { message, announceFilterChange, announceTrackPlayback } = useLiveRegion();
 
   // Load tracks on component mount
   useEffect(() => {
@@ -70,10 +74,13 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
       }
 
       setFilteredTracks(filtered);
+      
+      // Announce filter results
+      announceFilterChange(filtered.length);
     } catch (error) {
       console.error('Failed to apply filters:', error);
     }
-  }, [tracks, filters, searchQuery, selectedCategory]);
+  }, [tracks, filters, searchQuery, selectedCategory, announceFilterChange]);
 
   // Filter tracks when filters change
   useEffect(() => {
@@ -126,9 +133,11 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
   const handlePlayTrack = (track: Track) => {
     if (currentlyPlaying === track.id) {
       setCurrentlyPlaying(null);
+      announceTrackPlayback(track.title, 'paused');
       // Stop audio logic here
     } else {
       setCurrentlyPlaying(track.id);
+      announceTrackPlayback(track.title, 'playing');
       // Play audio logic here
     }
   };
@@ -161,7 +170,10 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="music-library">
+      {/* Live Region for Accessibility */}
+      <LiveRegion message={message} />
+      
       {/* Header */}
       <div className="text-center">
         <h1 className="text-4xl font-bold text-white mb-2">
@@ -439,6 +451,7 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
                 onPause={() => setCurrentlyPlaying(null)}
                 onEdit={handleTrackEdit}
                 isPlaying={currentlyPlaying === track.id}
+                onAnnounce={(message) => message && message}
               />
             ))}
           </motion.div>

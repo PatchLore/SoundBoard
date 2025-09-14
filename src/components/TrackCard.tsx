@@ -14,6 +14,7 @@ interface TrackCardProps {
   isPlaying?: boolean;
   showActions?: boolean;
   compact?: boolean;
+  onAnnounce?: (message: string) => void;
 }
 
 const TrackCard: React.FC<TrackCardProps> = memo(({
@@ -23,7 +24,8 @@ const TrackCard: React.FC<TrackCardProps> = memo(({
   onEdit,
   isPlaying = false,
   showActions = true,
-  compact = false
+  compact = false,
+  onAnnounce
 }) => {
   // Handle play/pause with unified audio controller
   const handlePlay = (track: Track) => {
@@ -48,6 +50,7 @@ const TrackCard: React.FC<TrackCardProps> = memo(({
       showTags={true}
       showDetails={true}
       showAdminControls={false}
+      onAnnounce={onAnnounce}
     />
   );
 });

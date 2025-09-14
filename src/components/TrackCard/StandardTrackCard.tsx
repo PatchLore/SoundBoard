@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Track } from '../../types/track';
 import { TRACK_CARD_STYLES, ARIA_LABELS } from './constants';
@@ -28,6 +28,7 @@ interface StandardTrackCardProps {
   showAdminControls?: boolean;
   compact?: boolean;
   className?: string;
+  onAnnounce?: (message: string) => void;
 }
 
 const StandardTrackCard: React.FC<StandardTrackCardProps> = ({
@@ -44,7 +45,8 @@ const StandardTrackCard: React.FC<StandardTrackCardProps> = ({
   showDetails = true,
   showAdminControls = false,
   compact = false,
-  className = ''
+  className = '',
+  onAnnounce
 }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [isInPlaylist, setIsInPlaylist] = useState(false);
@@ -60,31 +62,47 @@ const StandardTrackCard: React.FC<StandardTrackCardProps> = ({
   const tagsSpacing = TRACK_CARD_STYLES.spacing.tags[size];
   const actionsSpacing = TRACK_CARD_STYLES.spacing.actions[size];
 
-  // Event handlers
-  const handlePlayPause = () => {
+  // Event handlers with accessibility announcements
+  const handlePlayPause = useCallback(() => {
     if (isPlaying) {
       onPause?.(track);
+      onAnnounce?.(`${track.title} paused`);
     } else {
       onPlay?.(track);
+      onAnnounce?.(`${track.title} now playing`);
     }
-  };
+  }, [isPlaying, track, onPlay, onPause, onAnnounce]);
 
-  const handleLike = () => {
-    setIsLiked(!isLiked);
-  };
+  const handleLike = useCallback(() => {
+    const newLikedState = !isLiked;
+    setIsLiked(newLikedState);
+    onAnnounce?.(`${track.title} ${newLikedState ? 'liked' : 'unliked'}`);
+  }, [isLiked, track, onAnnounce]);
 
-  const handlePlaylistToggle = () => {
-    if (isInPlaylist) {
-      onRemoveFromPlaylist?.(track);
-    } else {
+  const handlePlaylistToggle = useCallback(() => {
+    const newPlaylistState = !isInPlaylist;
+    if (newPlaylistState) {
       onAddToPlaylist?.(track);
+      onAnnounce?.(`${track.title} added to playlist`);
+    } else {
+      onRemoveFromPlaylist?.(track);
+      onAnnounce?.(`${track.title} removed from playlist`);
     }
-    setIsInPlaylist(!isInPlaylist);
-  };
+    setIsInPlaylist(newPlaylistState);
+  }, [isInPlaylist, track, onAddToPlaylist, onRemoveFromPlaylist, onAnnounce]);
 
-  const handleCopyAttribution = () => {
+  const handleCopyAttribution = useCallback(() => {
     copyAttribution(track);
-  };
+    onAnnounce?.(`Attribution for ${track.title} copied to clipboard`);
+  }, [track, onAnnounce]);
+
+  // Keyboard event handlers
+  const handleKeyDown = useCallback((e: React.KeyboardEvent, action: () => void) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      action();
+    }
+  }, []);
 
   // Get top tags with overflow
   const { visibleTags, hasOverflow, overflowCount } = getTopTags(track.tags, TRACK_CARD_STYLES.tags.maxVisible);
@@ -206,13 +224,16 @@ const StandardTrackCard: React.FC<StandardTrackCardProps> = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handlePlayPause}
-            className={`${TRACK_CARD_STYLES.buttons.primary.base} ${
+            onKeyDown={(e) => handleKeyDown(e, handlePlayPause)}
+            className={`${TRACK_CARD_STYLES.buttons.primary.base} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 ${
               isPlaying 
                 ? TRACK_CARD_STYLES.buttons.primary.pause 
                 : TRACK_CARD_STYLES.buttons.primary.play
             }`}
             aria-label={isPlaying ? ARIA_LABELS.pause : ARIA_LABELS.play}
+            aria-pressed={isPlaying}
             id={generateTrackCardId(track, 'play-pause')}
+            type="button"
           >
             {isPlaying ? (
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
@@ -232,13 +253,16 @@ const StandardTrackCard: React.FC<StandardTrackCardProps> = ({
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handleLike}
-              className={`${TRACK_CARD_STYLES.buttons.secondary.base} ${
+              onKeyDown={(e) => handleKeyDown(e, handleLike)}
+              className={`${TRACK_CARD_STYLES.buttons.secondary.base} focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900 ${
                 isLiked 
                   ? 'bg-red-600/20 text-red-400 border border-red-600/30' 
                   : TRACK_CARD_STYLES.buttons.secondary.inactive
               }`}
               aria-label={isLiked ? ARIA_LABELS.unlike : ARIA_LABELS.like}
+              aria-pressed={isLiked}
               id={generateTrackCardId(track, 'like')}
+              type="button"
             >
               <svg className="w-4 h-4" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -250,13 +274,16 @@ const StandardTrackCard: React.FC<StandardTrackCardProps> = ({
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handlePlaylistToggle}
-              className={`${TRACK_CARD_STYLES.buttons.secondary.base} ${
+              onKeyDown={(e) => handleKeyDown(e, handlePlaylistToggle)}
+              className={`${TRACK_CARD_STYLES.buttons.secondary.base} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 ${
                 isInPlaylist 
                   ? TRACK_CARD_STYLES.buttons.secondary.active 
                   : TRACK_CARD_STYLES.buttons.secondary.inactive
               }`}
               aria-label={isInPlaylist ? ARIA_LABELS.removeFromPlaylist : ARIA_LABELS.addToPlaylist}
+              aria-pressed={isInPlaylist}
               id={generateTrackCardId(track, 'playlist')}
+              type="button"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                 <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -268,9 +295,11 @@ const StandardTrackCard: React.FC<StandardTrackCardProps> = ({
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handleCopyAttribution}
-              className={TRACK_CARD_STYLES.buttons.secondary.inactive}
+              onKeyDown={(e) => handleKeyDown(e, handleCopyAttribution)}
+              className={`${TRACK_CARD_STYLES.buttons.secondary.inactive} focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-900`}
               aria-label={ARIA_LABELS.copyAttribution}
               id={generateTrackCardId(track, 'copy')}
+              type="button"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -291,9 +320,11 @@ const StandardTrackCard: React.FC<StandardTrackCardProps> = ({
           {onEdit && (
             <button
               onClick={() => onEdit(track)}
-              className="p-1.5 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded-lg transition-all duration-200"
+              onKeyDown={(e) => handleKeyDown(e, () => onEdit(track))}
+              className="p-1.5 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
               aria-label={ARIA_LABELS.edit}
               id={generateTrackCardId(track, 'edit')}
+              type="button"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -303,9 +334,11 @@ const StandardTrackCard: React.FC<StandardTrackCardProps> = ({
           {onDelete && (
             <button
               onClick={() => onDelete(track)}
-              className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-all duration-200"
+              onKeyDown={(e) => handleKeyDown(e, () => onDelete(track))}
+              className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900"
               aria-label={ARIA_LABELS.delete}
               id={generateTrackCardId(track, 'delete')}
+              type="button"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
