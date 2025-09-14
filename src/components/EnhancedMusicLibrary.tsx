@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Track, FilterOptions } from '../types/track';
 import { UserRole } from '../types/agency';
@@ -11,6 +11,7 @@ import BulkUploadModal from './BulkUploadModal';
 import ImportPlaylistModal from './ImportPlaylistModal';
 import TrackEditModal from './TrackEditModal';
 import { LiveRegion, useLiveRegion } from './A11y';
+import { PerfPanel } from './Diagnostics';
 
 interface EnhancedMusicLibraryProps {
   userRole: UserRole;
@@ -32,6 +33,19 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
   const [editingTrack, setEditingTrack] = useState<Track | null>(null);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  // Pagination and load-more state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreTracks, setHasMoreTracks] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [totalTracks, setTotalTracks] = useState(0);
+  
+  // Performance diagnostics
+  const [showPerfPanel, setShowPerfPanel] = useState(false);
+  const loadMoreTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isLoadMoreActiveRef = useRef(false);
 
   // Live region for accessibility announcements
   const { message, announceFilterChange, announceTrackPlayback } = useLiveRegion();
@@ -87,38 +101,92 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
     applyFilters();
   }, [applyFilters]);
 
-  const loadTracks = async () => {
+  const loadTracks = async (page: number = 1, cursorId?: string | null, append: boolean = false) => {
     try {
-      setIsLoading(true);
-      const allTracks = await trackManagementService.getAllTracks();
-      const allCategories = await trackManagementService.getCategories();
-      
-      // Also load demo tracks from localStorage if available
-      const demoTracksData = localStorage.getItem('demo_tracks');
-      if (demoTracksData) {
-        try {
-          const demoTracks = JSON.parse(demoTracksData);
-          const combinedTracks = [...allTracks, ...demoTracks];
-          setTracks(combinedTracks);
-        } catch (e) {
-          console.error('Failed to parse demo tracks:', e);
-          setTracks(allTracks);
-        }
-      } else {
-        setTracks(allTracks);
+      if (!append) {
+        setIsLoading(true);
       }
       
+      setLoadMoreError(null);
+      
+      // Simulate paginated API call (replace with actual implementation)
+      const startTime = performance.now();
+      const pageSize = 20; // Load 20 tracks at a time
+      
+      // Mock paginated response
+      const allTracks = await trackManagementService.getAllTracks();
+      const startIndex = (page - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const paginatedTracks = allTracks.slice(startIndex, endIndex);
+      
+      const responseTime = performance.now() - startTime;
+      
+      // Update metrics for performance panel
+      if (typeof window !== 'undefined' && (window as any).updateLoadMoreMetrics) {
+        (window as any).updateLoadMoreMetrics(paginatedTracks.length);
+      }
+      
+      if (append) {
+        setTracks(prev => [...prev, ...paginatedTracks]);
+        setCurrentPage(prev => prev + 1);
+      } else {
+        setTracks(paginatedTracks);
+        setCurrentPage(page);
+        setCursor(paginatedTracks[paginatedTracks.length - 1]?.id || null);
+      }
+      
+      // Check if there are more tracks
+      setHasMoreTracks(endIndex < allTracks.length);
+      setTotalTracks(allTracks.length);
+      
+      const allCategories = await trackManagementService.getCategories();
       setCategories(allCategories);
+      
     } catch (error) {
       console.error('Failed to load tracks:', error);
+      setLoadMoreError('Failed to load tracks. Please try again.');
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
+      isLoadMoreActiveRef.current = false;
     }
   };
+
+  // Throttled load more function
+  const handleLoadMore = useCallback(() => {
+    // Prevent concurrent load more requests
+    if (isLoadMoreActiveRef.current || isLoadingMore || !hasMoreTracks) {
+      return;
+    }
+
+    // Clear any existing timeout
+    if (loadMoreTimeoutRef.current) {
+      clearTimeout(loadMoreTimeoutRef.current);
+    }
+
+    // Throttle load more requests (minimum 1 second between requests)
+    loadMoreTimeoutRef.current = setTimeout(() => {
+      if (!isLoadMoreActiveRef.current && hasMoreTracks) {
+        isLoadMoreActiveRef.current = true;
+        setIsLoadingMore(true);
+        loadTracks(currentPage + 1, cursor, true);
+      }
+    }, 1000);
+  }, [currentPage, cursor, hasMoreTracks, isLoadingMore]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (loadMoreTimeoutRef.current) {
+        clearTimeout(loadMoreTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleTrackUpload = (newTrack: Track) => {
     setTracks(prev => [newTrack, ...prev]);
     setShowUploader(false);
+    setTotalTracks(prev => prev + 1);
   };
 
   const handleTrackEdit = (track: Track) => {
@@ -155,6 +223,10 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
   };
 
   const getTotalTrackCount = () => {
+    return totalTracks || tracks?.length || 0;
+  };
+
+  const getLoadedTrackCount = () => {
     return tracks?.length || 0;
   };
 
@@ -175,7 +247,7 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
       <LiveRegion message={message} />
       
       {/* Header */}
-      <div className="text-center">
+      <div className="text-center relative">
         <h1 className="text-4xl font-bold text-white mb-2">
           🎵 Professional Music Library
         </h1>
@@ -183,9 +255,20 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
           Hand-curated royalty-free music for streamers
         </p>
         <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
-          <span>{getTotalTrackCount()} tracks available</span>
+          <span>{getLoadedTrackCount()} of {getTotalTrackCount()} tracks loaded</span>
           <span className="text-stream-accent">⭐ Premium Collection</span>
         </div>
+        
+        {/* Performance Panel Toggle */}
+        <button
+          onClick={() => setShowPerfPanel(!showPerfPanel)}
+          className="absolute top-0 right-0 bg-gray-800 hover:bg-gray-700 text-white p-2 rounded-lg transition-all duration-200"
+          title="Toggle Performance Diagnostics"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        </button>
       </div>
 
       {/* Admin Controls - Agency Only */}
@@ -458,6 +541,62 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
         )}
       </AnimatePresence>
 
+      {/* Load More Section */}
+      {filteredTracks.length > 0 && (
+        <div className="flex flex-col items-center space-y-4 py-8">
+          {hasMoreTracks && (
+            <button
+              onClick={handleLoadMore}
+              disabled={isLoadingMore || isLoadMoreActiveRef.current}
+              className={`px-8 py-4 rounded-xl font-semibold transition-all duration-200 ${
+                isLoadingMore || isLoadMoreActiveRef.current
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  : 'bg-stream-accent hover:bg-stream-accent/90 text-white hover:scale-105'
+              }`}
+            >
+              {isLoadingMore ? 'Loading...' : `Load More Tracks (${getTotalTrackCount() - getLoadedTrackCount()} remaining)`}
+            </button>
+          )}
+
+          {/* Load More Skeleton */}
+          {isLoadingMore && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full">
+              {[...Array(4)].map((_, index) => (
+                <div key={index} className="bg-gray-800 rounded-xl p-4 animate-pulse">
+                  <div className="h-4 bg-gray-700 rounded mb-2"></div>
+                  <div className="h-3 bg-gray-700 rounded mb-4 w-2/3"></div>
+                  <div className="h-8 bg-gray-700 rounded mb-2"></div>
+                  <div className="flex space-x-2">
+                    <div className="h-6 bg-gray-700 rounded w-16"></div>
+                    <div className="h-6 bg-gray-700 rounded w-16"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Load More Error */}
+          {loadMoreError && (
+            <div className="text-center">
+              <p className="text-red-400 mb-4">{loadMoreError}</p>
+              <button
+                onClick={() => handleLoadMore()}
+                className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200"
+              >
+                Retry Load More
+              </button>
+            </div>
+          )}
+
+          {/* End of Results */}
+          {!hasMoreTracks && getLoadedTrackCount() > 0 && (
+            <div className="text-center text-gray-400">
+              <p>🎵 All tracks loaded! You've reached the end of the library.</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Track Uploader Modal */}
       <AnimatePresence>
         {showUploader && (
@@ -504,6 +643,13 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
           />
         )}
       </AnimatePresence>
+
+      {/* Performance Diagnostics Panel */}
+      <PerfPanel
+        tracks={tracks}
+        isVisible={showPerfPanel}
+        onToggle={() => setShowPerfPanel(!showPerfPanel)}
+      />
     </div>
   );
 };
