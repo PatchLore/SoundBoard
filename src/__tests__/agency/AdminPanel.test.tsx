@@ -1,15 +1,10 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import AdminPanel from '../../components/admin/AdminPanel';
 
 // Mock the trackManagementService
-jest.mock('../../services/trackManagementService', () => ({
-  getAllTracks: jest.fn(),
-  getTotalTrackCount: jest.fn(),
-  getTracksByCategory: jest.fn(),
-  uploadTrack: jest.fn()
-}));
+jest.mock('../../services/trackManagementService');
 
 // Mock data
 const mockTracks = [
@@ -100,10 +95,15 @@ describe('AdminPanel Component', () => {
     });
 
     test('should show track statistics in manage tab', async () => {
-      render(<AdminPanel {...defaultProps} />);
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       const manageTab = screen.getByRole('button', { name: '🎵 Manage Tracks' });
-      fireEvent.click(manageTab);
+      
+      await act(async () => {
+        fireEvent.click(manageTab);
+      });
       
       // Wait for tracks to load and then check for statistics
       await waitFor(() => {
@@ -208,9 +208,13 @@ describe('AdminPanel Component', () => {
       const trackManagementService = require('../../services/trackManagementService');
       trackManagementService.getAllTracks = mockGetAllTracks;
       
-      render(<AdminPanel {...defaultProps} />);
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
-      expect(mockGetAllTracks).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockGetAllTracks).toHaveBeenCalled();
+      });
     });
 
     test('should handle loading state', () => {
@@ -227,7 +231,9 @@ describe('AdminPanel Component', () => {
       const trackManagementService = require('../../services/trackManagementService');
       trackManagementService.getAllTracks = mockGetAllTracks;
       
-      render(<AdminPanel {...defaultProps} />);
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       // Should still render without crashing
       expect(screen.getByText('Admin Panel')).toBeInTheDocument();
@@ -238,7 +244,9 @@ describe('AdminPanel Component', () => {
       const trackManagementService = require('../../services/trackManagementService');
       trackManagementService.getAllTracks = mockGetAllTracks;
       
-      render(<AdminPanel {...defaultProps} />);
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       // Should still render without crashing
       expect(screen.getByText('Admin Panel')).toBeInTheDocument();

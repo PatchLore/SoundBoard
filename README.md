@@ -32,7 +32,7 @@ A React + Tailwind CSS web application featuring a Stream Soundboard and Overlay
 
 2. **Start the development server:**
    ```bash
-   npm start
+   vercel dev
    ```
 
 3. **Open your browser:**

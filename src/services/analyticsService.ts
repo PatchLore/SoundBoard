@@ -48,7 +48,7 @@ class AnalyticsService {
   constructor() {
     this.sessionId = this.generateSessionId();
     this.isProduction = process.env.NODE_ENV === 'production';
-    this.analyticsEndpoint = process.env.REACT_APP_ANALYTICS_ENDPOINT || '';
+    this.analyticsEndpoint = (import.meta as any).env?.VITE_ANALYTICS_ENDPOINT || '';
     
     // Track in both production and development for testing
     this.initializePerformanceTracking();

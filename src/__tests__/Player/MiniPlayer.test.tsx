@@ -6,15 +6,7 @@ import unifiedAudioController from '../../services/unifiedAudioController';
 import { StreamingTrack } from '../../types/track';
 
 // Mock the unified audio controller
-jest.mock('../../services/unifiedAudioController', () => ({
-  getCurrentState: jest.fn(),
-  getVolume: jest.fn(),
-  on: jest.fn(),
-  off: jest.fn(),
-  pause: jest.fn(),
-  resume: jest.fn(),
-  setVolume: jest.fn(),
-}));
+jest.mock('../../services/unifiedAudioController');
 
 // Mock framer-motion
 jest.mock('framer-motion', () => ({
