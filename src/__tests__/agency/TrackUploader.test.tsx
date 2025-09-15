@@ -13,6 +13,13 @@ jest.mock('../../services/trackManagementService', () => ({
   ]
 }));
 
+// Mock the useAuth hook
+jest.mock('../../hooks/useAuth');
+
+// Mock URL.createObjectURL for JSDOM
+global.URL.createObjectURL = jest.fn(() => 'mock-object-url');
+global.URL.revokeObjectURL = jest.fn();
+
 // Mock data
 const mockTrack: Partial<Track> = {
   title: 'Test Track',

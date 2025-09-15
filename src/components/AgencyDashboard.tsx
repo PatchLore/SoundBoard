@@ -8,6 +8,8 @@ import BrandingCustomization from './BrandingCustomization';
 import PlaceholderAvatar from './PlaceholderAvatar';
 import ClientManagement from './ClientManagement';
 import AddStreamerForm from './AddStreamerForm';
+import StreamerSoundboardManager from './StreamerSoundboardManager';
+import StreamerStatsModal from './StreamerStatsModal';
 import authService, { FeatureFlags } from '../services/authService';
 
 const AgencyDashboard: React.FC = () => {
@@ -18,6 +20,9 @@ const AgencyDashboard: React.FC = () => {
   const [selectedStreamer, setSelectedStreamer] = useState<Streamer | null>(null);
   const [showStreamerProfile, setShowStreamerProfile] = useState(false);
   const [showAddStreamerModal, setShowAddStreamerModal] = useState(false);
+  const [showSoundboardManager, setShowSoundboardManager] = useState(false);
+  const [showStatsModal, setShowStatsModal] = useState(false);
+  const [selectedStreamerForStats, setSelectedStreamerForStats] = useState<Streamer | null>(null);
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags | null>(null);
 
   // Load feature flags
@@ -58,7 +63,14 @@ const AgencyDashboard: React.FC = () => {
       updatedAt: new Date().toISOString()
     };
 
+    // Update local state
     setStreamers(prev => [...prev, newStreamer]);
+    
+    // Save to localStorage for persistence
+    const demoStreamers = JSON.parse(localStorage.getItem('demo_streamers') || '[]');
+    demoStreamers.push(newStreamer);
+    localStorage.setItem('demo_streamers', JSON.stringify(demoStreamers));
+    
     setShowAddStreamerModal(false);
   };
 
@@ -86,14 +98,15 @@ const AgencyDashboard: React.FC = () => {
     if (demoStreamersData) {
       try {
         const demoStreamers = JSON.parse(demoStreamersData);
+        // Use the saved streamers directly if they have all required fields
         mockStreamers = demoStreamers.map((demo: any) => ({
           id: demo.id,
           name: demo.name,
           email: demo.email,
-          agencyId: 'agency_001',
-          avatar: undefined,
-          isActive: true,
-          soundboardConfig: {
+          agencyId: demo.agencyId || 'agency_001',
+          avatar: demo.avatar,
+          isActive: demo.isActive !== undefined ? demo.isActive : true,
+          soundboardConfig: demo.soundboardConfig || {
             favoriteTracks: [],
             customCategories: [],
             volumeDefaults: 75,
@@ -103,7 +116,7 @@ const AgencyDashboard: React.FC = () => {
             defaultEnergyLevel: 'high',
             theme: 'dark'
           },
-          usageStats: {
+          usageStats: demo.usageStats || {
             totalPlayTime: 0,
             tracksPlayed: 0,
             lastActive: new Date().toISOString(),
@@ -111,8 +124,8 @@ const AgencyDashboard: React.FC = () => {
             favoriteGenres: [],
             peakUsageHours: []
           },
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          createdAt: demo.createdAt || new Date().toISOString(),
+          updatedAt: demo.updatedAt || new Date().toISOString()
         }));
       } catch (e) {
         console.error('Failed to parse demo streamers:', e);
@@ -198,8 +211,27 @@ const AgencyDashboard: React.FC = () => {
     setShowStreamerProfile(true);
   };
 
+  const handleManageSoundboard = (streamer: Streamer) => {
+    setSelectedStreamer(streamer);
+    setShowSoundboardManager(true);
+  };
+
+  const handleViewStats = (streamer: Streamer) => {
+    setSelectedStreamerForStats(streamer);
+    setShowStatsModal(true);
+  };
+
   const handleStreamerSave = (updatedStreamer: Streamer) => {
+    // Update local state
     setStreamers(prev => prev.map(s => s.id === updatedStreamer.id ? updatedStreamer : s));
+    
+    // Save to localStorage for persistence
+    const demoStreamers = JSON.parse(localStorage.getItem('demo_streamers') || '[]');
+    const updatedDemoStreamers = demoStreamers.map((s: any) => 
+      s.id === updatedStreamer.id ? updatedStreamer : s
+    );
+    localStorage.setItem('demo_streamers', JSON.stringify(updatedDemoStreamers));
+    
     setShowStreamerProfile(false);
     setSelectedStreamer(null);
   };
@@ -340,7 +372,49 @@ const AgencyDashboard: React.FC = () => {
               transition={{ duration: 0.3 }}
             >
               <div className="space-y-6">
-                <h2 className="text-3xl font-bold text-white">Agency Overview</h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-3xl font-bold text-white">Agency Overview</h2>
+                  <button
+                    onClick={() => {
+                      // Restore demo data
+                      const demoStreamers = [
+                        { 
+                          id: 'streamer_1', 
+                          name: 'Alex "NightRider" Chen', 
+                          email: 'alex.chen@example.com',
+                          agencyId: 'agency_001',
+                          isActive: true,
+                          soundboardConfig: {
+                            favoriteTracks: [],
+                            customCategories: [],
+                            volumeDefaults: 75,
+                            autoplaySettings: false,
+                            defaultMood: 'energetic',
+                            defaultGenre: 'electronic',
+                            defaultEnergyLevel: 'high',
+                            theme: 'dark'
+                          },
+                          usageStats: {
+                            totalPlayTime: 0,
+                            tracksPlayed: 0,
+                            lastActive: new Date().toISOString(),
+                            favoriteMoods: [],
+                            favoriteGenres: [],
+                            peakUsageHours: []
+                          },
+                          createdAt: new Date().toISOString(),
+                          updatedAt: new Date().toISOString()
+                        }
+                      ];
+                      localStorage.setItem('demo_streamers', JSON.stringify(demoStreamers));
+                      window.location.reload();
+                    }}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                    title="Restore Demo Data"
+                  >
+                    🔄 Restore Demo Data
+                  </button>
+                </div>
                 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -437,7 +511,16 @@ const AgencyDashboard: React.FC = () => {
                         >
                           Edit
                         </button>
-                        <button className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
+                        <button 
+                          onClick={() => handleManageSoundboard(streamer)}
+                          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                        >
+                          Manage Soundboard
+                        </button>
+                        <button 
+                          onClick={() => handleViewStats(streamer)}
+                          className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                        >
                           View Stats
                         </button>
                       </div>
@@ -546,6 +629,35 @@ const AgencyDashboard: React.FC = () => {
               <AddStreamerForm onSubmit={handleAddStreamer} onCancel={() => setShowAddStreamerModal(false)} />
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Streamer Soundboard Manager Modal */}
+      <AnimatePresence>
+        {showSoundboardManager && selectedStreamer && (
+          <StreamerSoundboardManager
+            streamer={selectedStreamer}
+            onClose={() => {
+              setShowSoundboardManager(false);
+              setSelectedStreamer(null);
+            }}
+            onStreamerUpdate={(updatedStreamer) => {
+              setStreamers(prev => prev.map(s => s.id === updatedStreamer.id ? updatedStreamer : s));
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Streamer Stats Modal */}
+      <AnimatePresence>
+        {showStatsModal && selectedStreamerForStats && (
+          <StreamerStatsModal
+            streamer={selectedStreamerForStats}
+            onClose={() => {
+              setShowStatsModal(false);
+              setSelectedStreamerForStats(null);
+            }}
+          />
         )}
       </AnimatePresence>
     </div>

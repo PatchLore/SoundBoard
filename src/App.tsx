@@ -68,6 +68,10 @@ function App() {
 
   return (
     <>
+      {/* Demo Banner */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 text-center text-sm font-medium">
+        🚀 LIVE DEMO - Contact us for full version | Data resets on refresh
+      </div>
       <div className="min-h-screen bg-stream-dark">
         {/* Navigation Header */}
         <motion.header 
@@ -95,6 +99,19 @@ function App() {
                     className="text-gray-400 hover:text-white transition-colors text-sm"
                   >
                     Logout
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Simple lead capture - could be enhanced with a modal
+                      const email = prompt('Enter your email for full version access:');
+                      if (email) {
+                        localStorage.setItem('demo_lead', JSON.stringify({ email, timestamp: Date.now() }));
+                        alert('Thanks! We\'ll contact you about the full version.');
+                      }
+                    }}
+                    className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ml-2"
+                  >
+                    Get Full Version
                   </button>
                   {/* Testing: Quick switch to agency mode */}
                   {currentUser.userType === 'streamer' && (
@@ -182,12 +199,106 @@ function App() {
                       // Save to localStorage
                       localStorage.setItem('demo_tracks', JSON.stringify(demoTracks));
                       
-                      // Add demo streamers
+                      // Add demo streamers (human-style names)
                       const demoStreamers = [
-                        { id: 'demo_1', name: 'Demo Streamer 1', email: 'demo1@example.com' },
-                        { id: 'demo_2', name: 'Demo Streamer 2', email: 'demo2@example.com' }
+                        { id: 'streamer_1', name: 'Alex "NightRider" Chen', email: 'alex.chen@example.com' },
+                        { id: 'streamer_2', name: 'Maya "BeatSmith" Rivera', email: 'maya.rivera@example.com' },
+                        { id: 'streamer_3', name: 'Liam "TechFox" Patel', email: 'liam.patel@example.com' },
+                        { id: 'streamer_4', name: 'Sofia "ArcLight" Novak', email: 'sofia.novak@example.com' },
+                        { id: 'streamer_5', name: 'Noah "Crimson" Park', email: 'noah.park@example.com' }
                       ];
                       localStorage.setItem('demo_streamers', JSON.stringify(demoStreamers));
+                      
+                      // Add demo clients with streaming industry business names
+                      const demoClients = [
+                        {
+                          id: 'client_1',
+                          name: 'StreamTech Studios',
+                          description: 'Professional streaming equipment and studio rentals',
+                          collections: [
+                            {
+                              id: 'coll_1',
+                              name: 'Gaming Intros',
+                              description: 'High-energy tracks for stream intros and transitions',
+                              tracks: ['demo_1', 'demo_2'],
+                              createdAt: new Date(),
+                              updatedAt: new Date()
+                            }
+                          ],
+                          createdAt: new Date(),
+                          updatedAt: new Date()
+                        },
+                        {
+                          id: 'client_2',
+                          name: 'Content Creator Academy',
+                          description: 'Online courses and coaching for streamers and YouTubers',
+                          collections: [
+                            {
+                              id: 'coll_2',
+                              name: 'Tutorial Backgrounds',
+                              description: 'Subtle ambient tracks for educational content',
+                              tracks: ['demo_1'],
+                              createdAt: new Date(),
+                              updatedAt: new Date()
+                            }
+                          ],
+                          createdAt: new Date(),
+                          updatedAt: new Date()
+                        },
+                        {
+                          id: 'client_3',
+                          name: 'Gaming Network Pro',
+                          description: 'Multi-platform gaming content network',
+                          collections: [
+                            {
+                              id: 'coll_3',
+                              name: 'Battle Royale Vibes',
+                              description: 'Intense tracks for competitive gaming streams',
+                              tracks: ['demo_2'],
+                              createdAt: new Date(),
+                              updatedAt: new Date()
+                            }
+                          ],
+                          createdAt: new Date(),
+                          updatedAt: new Date()
+                        },
+                        {
+                          id: 'client_4',
+                          name: 'Streamer Brand Co.',
+                          description: 'Merchandise and branding services for content creators',
+                          collections: [
+                            {
+                              id: 'coll_4',
+                              name: 'Brand Identity',
+                              description: 'Signature tracks for brand recognition',
+                              tracks: ['demo_1', 'demo_2'],
+                              createdAt: new Date(),
+                              updatedAt: new Date()
+                            }
+                          ],
+                          createdAt: new Date(),
+                          updatedAt: new Date()
+                        },
+                        {
+                          id: 'client_5',
+                          name: 'Esports Arena Live',
+                          description: 'Live event production for esports tournaments',
+                          collections: [
+                            {
+                              id: 'coll_5',
+                              name: 'Tournament Anthems',
+                              description: 'Epic tracks for championship moments',
+                              tracks: ['demo_2'],
+                              createdAt: new Date(),
+                              updatedAt: new Date()
+                            }
+                          ],
+                          createdAt: new Date(),
+                          updatedAt: new Date()
+                        }
+                      ];
+                      // Save to the storage key used by ClientManagement/trackStorageService
+                      localStorage.setItem('music_clients', JSON.stringify(demoClients));
                       
                       alert('Demo data added! Refresh the page to see it.');
                     }}
@@ -383,11 +494,12 @@ function App() {
 
       {/* Global Mini Player */}
       <div className="fixed bottom-4 left-4 right-4 z-50">
-        <MiniPlayer showVolume={false} />
+        <MiniPlayer showVolume={true} />
       </div>
     </>
   );
 }
 
 export default App;
+export {};
 

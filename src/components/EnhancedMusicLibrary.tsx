@@ -23,8 +23,8 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
   const [categories, setCategories] = useState(STREAMING_CATEGORIES);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'name' | 'energy' | 'duration' | 'uploadDate'>('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  // const [sortBy, setSortBy] = useState<'name' | 'energy' | 'duration' | 'uploadDate'>('name');
+  // const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [filters, setFilters] = useState<FilterOptions>({});
   const [isLoading, setIsLoading] = useState(true);
   const [showUploader, setShowUploader] = useState(false);
@@ -88,18 +88,23 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
       }
 
       setFilteredTracks(filtered);
-      
-      // Announce filter results
-      announceFilterChange(filtered.length);
     } catch (error) {
       console.error('Failed to apply filters:', error);
     }
-  }, [tracks, filters, searchQuery, selectedCategory, announceFilterChange]);
+  }, [tracks, filters, searchQuery, selectedCategory]);
 
   // Filter tracks when filters change
   useEffect(() => {
     applyFilters();
   }, [applyFilters]);
+
+  // Announce filter result changes separately to avoid re-creating applyFilters
+  useEffect(() => {
+    // Only announce when we have finished initial loading
+    if (!isLoading) {
+      announceFilterChange(filteredTracks.length);
+    }
+  }, [filteredTracks.length, isLoading, announceFilterChange]);
 
   const loadTracks = async (page: number = 1, cursorId?: string | null, append: boolean = false) => {
     try {
@@ -110,16 +115,17 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
       setLoadMoreError(null);
       
       // Simulate paginated API call (replace with actual implementation)
-      const startTime = performance.now();
+      // const startTime = performance.now();
       const pageSize = 20; // Load 20 tracks at a time
       
       // Mock paginated response
-      const allTracks = await trackManagementService.getAllTracks();
+      const serviceTracks = await trackManagementService.getAllTracks();
+      const allTracks: Track[] = Array.isArray(serviceTracks) ? serviceTracks : [];
       const startIndex = (page - 1) * pageSize;
       const endIndex = startIndex + pageSize;
       const paginatedTracks = allTracks.slice(startIndex, endIndex);
       
-      const responseTime = performance.now() - startTime;
+      // const responseTime = performance.now() - startTime;
       
       // Update metrics for performance panel
       if (typeof window !== 'undefined' && (window as any).updateLoadMoreMetrics) {
@@ -521,7 +527,7 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
         ) : (
           <motion.div
             key="tracks-grid"
-            className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'space-y-4'}
+            className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start' : 'space-y-4'}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

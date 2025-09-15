@@ -1,10 +1,7 @@
-import { useState, memo } from 'react';
-import { motion } from 'framer-motion';
+import { memo } from 'react';
 import { Track } from '../types/track';
 import unifiedAudioController from '../services/unifiedAudioController';
 import StandardTrackCard from './TrackCard/StandardTrackCard';
-import { ARIA_LABELS, TRACK_CARD_STYLES } from './TrackCard/constants';
-import { formatDuration, getMoodColor, formatCategoryName, getTopTags, copyAttribution, generateTrackCardId } from './TrackCard/utils';
 
 interface TrackCardProps {
   track: Track;

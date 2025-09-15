@@ -3,12 +3,89 @@ import { STREAMING_CATEGORIES, updateCategoryTrackCount, getTotalTrackCount } fr
 
 // Sample tracks data - in production this would come from a database
 const SAMPLE_TRACKS: Track[] = [
+  // Your custom tracks
+  {
+    id: 'custom-1',
+    title: 'Your Track 1',
+    artist: 'Your Artist',
+    duration: 180, // 3:00
+    audioUrl: '/tracks/track1.mp3',
+    coverUrl: '/covers/custom-1.jpg',
+    category: 'chill-gaming',
+    subcategory: 'custom',
+    mood: 'chill',
+    energy: 3,
+    bpm: 120,
+    key: 'C major',
+    tags: ['custom', 'chill', 'gaming'],
+    description: 'Your custom track 1',
+    streamSafe: true,
+    loopFriendly: true,
+    hasIntro: false,
+    hasOutro: false,
+    dmcaSafe: true,
+    uploadDate: '2024-01-15',
+    uploadedBy: 'user',
+    approved: true,
+    featured: false
+  },
+  {
+    id: 'custom-2',
+    title: 'Your Track 2',
+    artist: 'Your Artist',
+    duration: 200, // 3:20
+    audioUrl: '/tracks/track2.mp3',
+    coverUrl: '/covers/custom-2.jpg',
+    category: 'gaming-action',
+    subcategory: 'custom',
+    mood: 'energetic',
+    energy: 4,
+    bpm: 140,
+    key: 'D minor',
+    tags: ['custom', 'action', 'gaming'],
+    description: 'Your custom track 2',
+    streamSafe: true,
+    loopFriendly: true,
+    hasIntro: false,
+    hasOutro: false,
+    dmcaSafe: true,
+    uploadDate: '2024-01-15',
+    uploadedBy: 'user',
+    approved: true,
+    featured: false
+  },
+  {
+    id: 'custom-3',
+    title: 'Your Track 3',
+    artist: 'Your Artist',
+    duration: 160, // 2:40
+    audioUrl: '/tracks/track3.mp3',
+    coverUrl: '/covers/custom-3.jpg',
+    category: 'boss-battle',
+    subcategory: 'custom',
+    mood: 'epic',
+    energy: 5,
+    bpm: 160,
+    key: 'E minor',
+    tags: ['custom', 'epic', 'battle'],
+    description: 'Your custom track 3',
+    streamSafe: true,
+    loopFriendly: true,
+    hasIntro: true,
+    hasOutro: true,
+    dmcaSafe: true,
+    uploadDate: '2024-01-15',
+    uploadedBy: 'user',
+    approved: true,
+    featured: true
+  },
+  // Original sample tracks
   {
     id: '1',
-    title: 'Epic Boss Battle',
-    artist: 'Epic Orchestral',
-    duration: 165, // 2:45
-    audioUrl: '/tracks/boss-battle/epic-orchestral-battle-01.mp3',
+    title: 'Chill River',
+    artist: 'Your Upload',
+    duration: 180, // 3:00
+    audioUrl: '/tracks/track1.mp3',
     coverUrl: '/covers/boss-battle-01.jpg',
     category: 'boss-battle',
     subcategory: 'orchestral',
@@ -30,10 +107,10 @@ const SAMPLE_TRACKS: Track[] = [
   },
   {
     id: '2',
-    title: 'Chill Lo-Fi Background',
-    artist: 'Lo-Fi Vibes',
-    duration: 260, // 4:20
-    audioUrl: '/tracks/chill-gaming/lo-fi-background-01.mp3',
+    title: 'Epic Journey',
+    artist: 'Your Upload',
+    duration: 200, // 3:20
+    audioUrl: '/tracks/track2.mp3',
     coverUrl: '/covers/chill-gaming-01.jpg',
     category: 'chill-gaming',
     subcategory: 'lo-fi',
@@ -55,10 +132,10 @@ const SAMPLE_TRACKS: Track[] = [
   },
   {
     id: '3',
-    title: 'Victory Fanfare',
-    artist: 'Triumph Sounds',
-    duration: 45, // 0:45
-    audioUrl: '/tracks/intro-outro/victory-fanfare-01.mp3',
+    title: 'Mysterious Night',
+    artist: 'Your Upload',
+    duration: 160, // 2:40
+    audioUrl: '/tracks/track3.mp3',
     coverUrl: '/covers/victory-01.jpg',
     category: 'intro-outro',
     subcategory: 'victory',

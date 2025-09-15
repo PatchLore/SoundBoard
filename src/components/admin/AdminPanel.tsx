@@ -46,10 +46,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   };
 
   const getStats = () => {
-    const total = tracks.length;
-    const approved = tracks.filter(t => t.approved).length;
-    const pending = tracks.filter(t => !t.approved).length;
-    const categories = new Set(tracks.map(t => t.category)).size;
+    const safeTracks = Array.isArray(tracks) ? tracks : [];
+    const total = safeTracks.length;
+    const approved = safeTracks.filter(t => t.approved).length;
+    const pending = safeTracks.filter(t => !t.approved).length;
+    const categories = new Set(safeTracks.map(t => t.category)).size;
     
     return { total, approved, pending, categories };
   };

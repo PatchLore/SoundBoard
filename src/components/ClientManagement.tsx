@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Client } from '../services/trackStorageService';
 import trackStorageService from '../services/trackStorageService';
+import CollectionTrackManager from './CollectionTrackManager';
 
 const ClientManagement: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -12,6 +13,8 @@ const ClientManagement: React.FC = () => {
   const [newClientDescription, setNewClientDescription] = useState('');
   const [newCollectionName, setNewCollectionName] = useState('');
   const [newCollectionDescription, setNewCollectionDescription] = useState('');
+  const [showTrackManager, setShowTrackManager] = useState(false);
+  const [selectedCollection, setSelectedCollection] = useState<any>(null);
 
   const loadClients = useCallback(() => {
     try {
@@ -72,6 +75,11 @@ const ClientManagement: React.FC = () => {
     } catch (error) {
       console.error('Error creating collection:', error);
     }
+  };
+
+  const handleManageTracks = (collection: any) => {
+    setSelectedCollection(collection);
+    setShowTrackManager(true);
   };
 
   const deleteClient = (clientId: string) => {
@@ -223,13 +231,22 @@ const ClientManagement: React.FC = () => {
                             {collection.tracks.length} tracks
                           </p>
                         </div>
-                        <button
-                          onClick={() => deleteCollection(collection.id)}
-                          className="p-2 text-gray-400 hover:text-red-400 transition-colors"
-                          title="Delete collection"
-                        >
-                          🗑️
-                        </button>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleManageTracks(collection)}
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+                            title="Manage tracks"
+                          >
+                            Manage Tracks
+                          </button>
+                          <button
+                            onClick={() => deleteCollection(collection.id)}
+                            className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                            title="Delete collection"
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </div>
                     </motion.div>
                   ))}
@@ -372,6 +389,22 @@ const ClientManagement: React.FC = () => {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Collection Track Manager Modal */}
+      <AnimatePresence>
+        {showTrackManager && selectedClient && selectedCollection && (
+          <CollectionTrackManager
+            client={selectedClient}
+            collection={selectedCollection}
+            onClose={() => {
+              setShowTrackManager(false);
+              setSelectedCollection(null);
+              // Reload clients to refresh track counts
+              loadClients();
+            }}
+          />
         )}
       </AnimatePresence>
     </div>
