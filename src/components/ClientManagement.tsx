@@ -2,6 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Client } from '../services/trackStorageService';
 import trackStorageService from '../services/trackStorageService';
+import CollectionTrackManager from './CollectionTrackManager';
+import { Streamer } from '../types/agency';
+import { useToast } from './Toast';
+import assignmentsBackupService from '../services/assignmentsBackupService';
 
 const ClientManagement: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -12,6 +16,13 @@ const ClientManagement: React.FC = () => {
   const [newClientDescription, setNewClientDescription] = useState('');
   const [newCollectionName, setNewCollectionName] = useState('');
   const [newCollectionDescription, setNewCollectionDescription] = useState('');
+  const [showTrackManager, setShowTrackManager] = useState(false);
+  const [selectedCollection, setSelectedCollection] = useState<any>(null);
+  const [streamers, setStreamers] = useState<Streamer[]>([]);
+  const [collectionAssignments, setCollectionAssignments] = useState<Record<string, string[]>>({});
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [selectedCollectionForAssignment, setSelectedCollectionForAssignment] = useState<any>(null);
+  const { showToast } = useToast();
 
   const loadClients = useCallback(() => {
     try {
@@ -27,9 +38,91 @@ const ClientManagement: React.FC = () => {
     }
   }, [selectedClient]);
 
+  const loadStreamers = useCallback(() => {
+    try {
+      const storedStreamers = localStorage.getItem('demo_streamers');
+      if (storedStreamers) {
+        const parsedStreamers = JSON.parse(storedStreamers);
+        setStreamers(parsedStreamers);
+      }
+    } catch (error) {
+      console.error('Error loading streamers:', error);
+    }
+  }, []);
+
+  const loadCollectionAssignments = useCallback(() => {
+    try {
+      const stored = localStorage.getItem('music_collection_assignments');
+      if (stored) {
+        setCollectionAssignments(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Error loading collection assignments:', error);
+    }
+  }, []);
+
+  const saveCollectionAssignments = useCallback((assignments: Record<string, string[]>) => {
+    try {
+      assignmentsBackupService.backup('save_collection_assignments');
+      localStorage.setItem('music_collection_assignments', JSON.stringify(assignments));
+      setCollectionAssignments(assignments);
+    } catch (error) {
+      console.error('Error saving collection assignments:', error);
+    }
+  }, []);
+
   useEffect(() => {
     loadClients();
-  }, [loadClients]);
+    loadStreamers();
+    loadCollectionAssignments();
+  }, [loadClients, loadStreamers, loadCollectionAssignments]);
+
+  // Helper functions
+  const getTotalTracksForClient = (client: Client): number => {
+    return client.collections.reduce((total, collection) => total + collection.tracks.length, 0);
+  };
+
+  const getLastActiveForClient = (client: Client): string => {
+    const clientUpdatedAt = new Date(client.updatedAt).getTime();
+    const collectionUpdatedAts = client.collections.map(c => new Date(c.updatedAt).getTime());
+    const lastUpdated = Math.max(clientUpdatedAt, ...collectionUpdatedAts);
+    return new Date(lastUpdated).toLocaleDateString();
+  };
+
+  const getAssignedStreamersForCollection = (collectionId: string): Streamer[] => {
+    const assignedStreamerIds = collectionAssignments[collectionId] || [];
+    return streamers.filter(streamer => assignedStreamerIds.includes(streamer.id));
+  };
+
+  const handleAssignCollection = (collection: any) => {
+    setSelectedCollectionForAssignment(collection);
+    setShowAssignmentModal(true);
+  };
+
+  const updateCollectionAssignment = (collectionId: string, streamerIds: string[]) => {
+    const newAssignments = {
+      ...collectionAssignments,
+      [collectionId]: streamerIds
+    };
+    saveCollectionAssignments(newAssignments);
+    
+    // Show toast notification
+    const collection = selectedClient?.collections.find(c => c.id === collectionId);
+    const assignedCount = streamerIds.length;
+    if (assignedCount > 0) {
+      showToast({
+        type: 'success',
+        title: 'Collection Assigned',
+        message: `"${collection?.name}" assigned to ${assignedCount} streamer${assignedCount > 1 ? 's' : ''}`
+      });
+    } else {
+      showToast({
+        type: 'info',
+        title: 'Collection Unassigned',
+        message: `"${collection?.name}" removed from all streamers`
+      });
+    }
+  };
 
   const createClient = () => {
     if (!newClientName.trim()) return;
@@ -72,6 +165,16 @@ const ClientManagement: React.FC = () => {
     } catch (error) {
       console.error('Error creating collection:', error);
     }
+  };
+
+  const handleManageTracks = (collection: any) => {
+    setSelectedCollection(collection);
+    setShowTrackManager(true);
+  };
+
+  const handleCollectionUpdate = () => {
+    // Refresh client data when collections are updated
+    loadClients();
   };
 
   const deleteClient = (clientId: string) => {
@@ -154,14 +257,22 @@ const ClientManagement: React.FC = () => {
                     onClick={() => setSelectedClient(client)}
                   >
                     <div className="flex items-center justify-between">
-                      <div>
+                      <div className="flex-1">
                         <h3 className="text-lg font-semibold text-white">{client.name}</h3>
                         {client.description && (
                           <p className="text-gray-400 text-sm mt-1">{client.description}</p>
                         )}
-                        <p className="text-gray-500 text-xs mt-2">
-                          {client.collections.length} collections
-                        </p>
+                        <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                          <span className="flex items-center">
+                            📁 {client.collections.length} collections
+                          </span>
+                          <span className="flex items-center">
+                            🎵 {getTotalTracksForClient(client)} tracks
+                          </span>
+                          <span className="flex items-center">
+                            🕒 {getLastActiveForClient(client)}
+                          </span>
+                        </div>
                       </div>
                       <button
                         onClick={(e) => {
@@ -207,38 +318,91 @@ const ClientManagement: React.FC = () => {
                 </div>
 
                 <div className="space-y-4">
-                  {selectedClient.collections.map(collection => (
-                    <motion.div
-                      key={collection.id}
-                      whileHover={{ scale: 1.01 }}
-                      className="bg-gray-700 rounded-lg p-4 border border-gray-600"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-lg font-semibold text-white">{collection.name}</h3>
-                          {collection.description && (
-                            <p className="text-gray-400 text-sm mt-1">{collection.description}</p>
-                          )}
-                          <p className="text-gray-500 text-xs mt-2">
-                            {collection.tracks.length} tracks
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => deleteCollection(collection.id)}
-                          className="p-2 text-gray-400 hover:text-red-400 transition-colors"
-                          title="Delete collection"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))}
-
-                  {selectedClient.collections.length === 0 && (
-                    <div className="text-center py-8 text-gray-400">
-                      <p>No collections yet</p>
-                      <p className="text-sm">Create collections to organize tracks for this client</p>
+                  {selectedClient.collections.length === 0 ? (
+                    <div className="text-center py-12 bg-gray-700/50 rounded-lg border-2 border-dashed border-gray-600">
+                      <div className="text-6xl mb-4">📁</div>
+                      <h3 className="text-lg font-semibold text-gray-300 mb-2">No collections yet</h3>
+                      <p className="text-gray-400 mb-4">Create one to assign tracks to streamers</p>
+                      <button
+                        onClick={() => setShowCreateCollection(true)}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                      >
+                        Create First Collection
+                      </button>
                     </div>
+                  ) : (
+                    selectedClient.collections.map(collection => {
+                    const assignedStreamers = getAssignedStreamersForCollection(collection.id);
+                    return (
+                      <motion.div
+                        key={collection.id}
+                        whileHover={{ scale: 1.01 }}
+                        className="bg-gray-700 rounded-lg p-4 border border-gray-600"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <h3 className="text-lg font-semibold text-white">{collection.name}</h3>
+                              <span className="px-2 py-1 bg-green-600/20 text-green-400 text-xs rounded-full">
+                                Client Collection
+                              </span>
+                            </div>
+                            {collection.description && (
+                              <p className="text-gray-400 text-sm mb-2">{collection.description}</p>
+                            )}
+                            <div className="flex items-center space-x-4 text-xs text-gray-500 mb-2">
+                              <span className="flex items-center">
+                                🎵 {collection.tracks.length} tracks
+                              </span>
+                              {assignedStreamers.length > 0 && (
+                                <span className="flex items-center">
+                                  👥 {assignedStreamers.length} streamer{assignedStreamers.length !== 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                            {assignedStreamers.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {assignedStreamers.map(streamer => (
+                                  <span
+                                    key={streamer.id}
+                                    className="px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded-full"
+                                  >
+                                    {streamer.name}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-2 ml-4">
+                            <button
+                              onClick={() => handleAssignCollection(collection)}
+                              className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded transition-colors focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                              title="Assign to streamers"
+                              aria-label={`Assign collection "${collection.name}" to streamers`}
+                            >
+                              Assign
+                            </button>
+                            <button
+                              onClick={() => handleManageTracks(collection)}
+                              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                              title="Manage tracks"
+                              aria-label={`Manage tracks in collection "${collection.name}"`}
+                            >
+                              Manage Tracks
+                            </button>
+                            <button
+                              onClick={() => deleteCollection(collection.id)}
+                              className="p-2 text-gray-400 hover:text-red-400 transition-colors focus:ring-2 focus:ring-red-500 focus:outline-none rounded"
+                              title="Delete collection"
+                              aria-label={`Delete collection "${collection.name}"`}
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })
                   )}
                 </div>
               </div>
@@ -372,6 +536,84 @@ const ClientManagement: React.FC = () => {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Collection Assignment Modal */}
+      <AnimatePresence>
+        {showAssignmentModal && selectedCollectionForAssignment && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="assignment-modal-title"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-gray-800 rounded-lg p-6 w-full max-w-md"
+            >
+              <h3 id="assignment-modal-title" className="text-xl font-semibold text-white mb-4">
+                Assign Collection: {selectedCollectionForAssignment.name}
+              </h3>
+              
+              <div className="space-y-3 mb-6">
+                {streamers.map(streamer => {
+                  const isAssigned = collectionAssignments[selectedCollectionForAssignment.id]?.includes(streamer.id) || false;
+                  return (
+                    <label key={streamer.id} className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isAssigned}
+                        onChange={(e) => {
+                          const currentAssignments = collectionAssignments[selectedCollectionForAssignment.id] || [];
+                          const newAssignments = e.target.checked
+                            ? [...currentAssignments, streamer.id]
+                            : currentAssignments.filter(id => id !== streamer.id);
+                          updateCollectionAssignment(selectedCollectionForAssignment.id, newAssignments);
+                        }}
+                        className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                        aria-describedby={`streamer-${streamer.id}-description`}
+                      />
+                      <span className="text-white">{streamer.name}</span>
+                      <span id={`streamer-${streamer.id}-description`} className="text-gray-400 text-sm">({streamer.email})</span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowAssignmentModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  aria-label="Close assignment modal"
+                >
+                  Done
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Collection Track Manager Modal */}
+      <AnimatePresence>
+        {showTrackManager && selectedClient && selectedCollection && (
+          <CollectionTrackManager
+            client={selectedClient}
+            collection={selectedCollection}
+            onClose={() => {
+              setShowTrackManager(false);
+              setSelectedCollection(null);
+              // Reload clients to refresh track counts
+              loadClients();
+            }}
+            onCollectionUpdate={handleCollectionUpdate}
+          />
         )}
       </AnimatePresence>
     </div>

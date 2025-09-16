@@ -74,7 +74,7 @@ const OverlayJukebox: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
+    <div className="min-h-screen bg-gray-900 text-white p-8" data-testid="overlay-jukebox">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
@@ -83,11 +83,12 @@ const OverlayJukebox: React.FC = () => {
         </div>
 
         {/* Current Track Info */}
-        <div className="bg-gray-800 rounded-3xl p-8 mb-8 text-center">
-          <h2 className="text-2xl font-bold mb-2">{currentTrack.title}</h2>
-          <p className="text-gray-300 mb-4">{currentTrack.artist}</p>
+        <div className="bg-gray-800 rounded-3xl p-8 mb-8 text-center" data-testid="track-info">
+          <h2 className="text-2xl font-bold mb-2" data-testid="track-title">{currentTrack.title}</h2>
+          <p className="text-gray-300 mb-4" data-testid="track-artist">{currentTrack.artist}</p>
           <p className="text-gray-400 mb-4">
-            Duration: {currentTrack.duration} • Energy: {currentTrack.energy}
+            Duration: <span data-testid="track-duration">{currentTrack.duration}</span> • Energy: <span data-testid="track-energy">{currentTrack.energy}</span>
+            {currentTrack.bpm && <span> • BPM: <span data-testid="track-bpm">{currentTrack.bpm}</span></span>}
           </p>
           
           {/* Streaming Category */}
@@ -98,7 +99,7 @@ const OverlayJukebox: React.FC = () => {
           </div>
 
           {/* Tags */}
-          <div className="flex flex-wrap justify-center gap-2 mb-6">
+          <div className="flex flex-wrap justify-center gap-2 mb-6" data-testid="track-tags">
             {currentTrack.tags.slice(0, 5).map((tag, index) => (
               <span
                 key={index}
@@ -116,13 +117,14 @@ const OverlayJukebox: React.FC = () => {
         </div>
 
         {/* Controls */}
-        <div className="flex flex-wrap justify-center gap-4 mb-8">
+        <div className="flex flex-wrap justify-center gap-4 mb-8" data-testid="controls">
           {/* Previous */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handlePrevious}
             className="px-6 py-3 bg-gray-700 text-gray-300 hover:text-white hover:bg-gray-600 rounded-2xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl border border-gray-600"
+            data-testid="previous-btn"
           >
             <div className="flex items-center gap-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,7 +139,8 @@ const OverlayJukebox: React.FC = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={isPlaying ? handlePause : handlePlay}
-            className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl hover:bg-blue-700"
+            className="px-8 py-4 min-w-16 min-h-16 bg-blue-600 text-white rounded-2xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl hover:bg-blue-700"
+            data-testid="play-pause-btn"
           >
             <div className="flex items-center gap-2">
               {isPlaying ? (
@@ -164,6 +167,7 @@ const OverlayJukebox: React.FC = () => {
             whileTap={{ scale: 0.95 }}
             onClick={handleNext}
             className="px-6 py-3 bg-gray-700 text-gray-300 hover:text-white hover:bg-gray-600 rounded-2xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl border border-gray-600"
+            data-testid="next-btn"
           >
             <div className="flex items-center gap-2">
               Next
@@ -186,6 +190,7 @@ const OverlayJukebox: React.FC = () => {
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-700 text-gray-300 hover:text-white hover:bg-gray-600 border border-gray-600'
             }`}
+            data-testid="shuffle-btn"
           >
             <div className="flex items-center gap-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

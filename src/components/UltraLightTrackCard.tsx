@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StreamingTrack } from '../types/track';
 import audioController from '../services/audioController';
-import DMCAComplianceIndicator from './DMCAComplianceIndicator';
+import StandardTrackCard from './TrackCard/StandardTrackCard';
 
 interface UltraLightTrackCardProps {
   track: StreamingTrack;
@@ -32,7 +32,7 @@ const UltraLightTrackCard: React.FC<UltraLightTrackCardProps> = ({ track, onPlay
     };
   }, [track.id, onPause]);
 
-  const handlePlay = () => {
+  const handlePlay = (track: StreamingTrack) => {
     console.log('🎵 UltraLightTrackCard Play button clicked for:', track.title);
     if (isPlaying) {
       console.log('🎵 Stopping track:', track.title);
@@ -53,58 +53,27 @@ const UltraLightTrackCard: React.FC<UltraLightTrackCardProps> = ({ track, onPlay
     }
   };
 
-  // const handlePause = () => {
-  //   if (onPause) {
-  //     onPause();
-  //   } else {
-  //     setInternalIsPlaying(false);
-  //     audioController.stopTrack(track.id);
-  //   }
-  // };
-
-  // const handleEnd = () => {
-  //   if (onPause) {
-  //     onPause();
-  //   } else {
-  //     setInternalIsPlaying(false);
-  //     audioController.stopTrack(track.id);
-  //   }
-  // };
+  const handlePause = (track: StreamingTrack) => {
+    if (onPause) {
+      onPause();
+    } else {
+      setInternalIsPlaying(false);
+      audioController.stopTrack(track.id);
+    }
+  };
 
   return (
-    <div className="bg-gray-800 border border-gray-600 p-3 rounded">
-
-
-      {/* Track Title - Minimal */}
-      <h3 className="text-sm font-medium text-white truncate mb-2">{track.title}</h3>
-      
-      {/* Duration - Minimal */}
-      <div className="text-xs text-gray-400 mb-2">{track.duration}</div>
-      
-      {/* Category - Minimal */}
-      <div className="text-xs text-blue-400 mb-2">{track.streamingCategory}</div>
-      
-      {/* DMCA Compliance Indicator - Compact */}
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs text-gray-400">DMCA</span>
-        <DMCAComplianceIndicator 
-          track={track} 
-          compact={true}
-        />
-      </div>
-      
-      {/* Play Button - Simple */}
-      <button
-        onClick={handlePlay}
-        className={`w-full py-2 px-3 rounded text-sm font-medium transition-colors ${
-          isPlaying
-            ? 'bg-red-600 text-white'
-            : 'bg-green-600 hover:bg-green-700 text-white'
-        }`}
-      >
-        {isPlaying ? 'Stop' : 'Play'}
-      </button>
-    </div>
+    <StandardTrackCard
+      track={track}
+      onPlay={handlePlay}
+      onPause={handlePause}
+      isPlaying={isPlaying}
+      showActions={true}
+      showTags={false}
+      showDetails={false}
+      showAdminControls={false}
+      compact={true}
+    />
   );
 };
 

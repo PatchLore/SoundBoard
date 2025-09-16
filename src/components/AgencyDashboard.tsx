@@ -7,7 +7,12 @@ import AnalyticsDashboard from './AnalyticsDashboard';
 import BrandingCustomization from './BrandingCustomization';
 import PlaceholderAvatar from './PlaceholderAvatar';
 import ClientManagement from './ClientManagement';
+import AddStreamerForm from './AddStreamerForm';
+import StreamerSoundboardManager from './StreamerSoundboardManager';
+import StreamerStatsModal from './StreamerStatsModal';
+import StreamerAssignedCollections from './StreamerAssignedCollections';
 import authService, { FeatureFlags } from '../services/authService';
+import usageStatsService, { AgencyUsageStats } from '../services/usageStatsService';
 
 const AgencyDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'streamers' | 'analytics' | 'branding' | 'bulk' | 'clients'>('overview');
@@ -16,7 +21,14 @@ const AgencyDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedStreamer, setSelectedStreamer] = useState<Streamer | null>(null);
   const [showStreamerProfile, setShowStreamerProfile] = useState(false);
+  const [showAddStreamerModal, setShowAddStreamerModal] = useState(false);
+  const [showSoundboardManager, setShowSoundboardManager] = useState(false);
+  const [showStatsModal, setShowStatsModal] = useState(false);
+  const [selectedStreamerForStats, setSelectedStreamerForStats] = useState<Streamer | null>(null);
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags | null>(null);
+  const [streamerFilter, setStreamerFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [showBackButton, setShowBackButton] = useState(false);
+  const [agencyStats, setAgencyStats] = useState<AgencyUsageStats | null>(null);
 
   // Load feature flags
   useEffect(() => {
@@ -24,6 +36,91 @@ const AgencyDashboard: React.FC = () => {
     setFeatureFlags(flags);
     console.log('🔒 AgencyDashboard feature flags:', flags);
   }, []);
+
+  // Load usage statistics
+  useEffect(() => {
+    const stats = usageStatsService.getAgencyStats();
+    setAgencyStats(stats);
+  }, [streamers]);
+
+  // Get assigned collections count for a streamer
+  const getAssignedCollectionsCount = (streamerId: string): number => {
+    try {
+      const assignmentsData = localStorage.getItem('music_collection_assignments');
+      const assignments = assignmentsData ? JSON.parse(assignmentsData) : {};
+      if (!assignments || typeof assignments !== 'object') return 0;
+      let count = 0;
+      Object.values(assignments).forEach((streamerIds: any) => {
+        if (Array.isArray(streamerIds) && streamerIds.includes(streamerId)) {
+          count++;
+        }
+      });
+      return count;
+    } catch {
+      return 0;
+    }
+  };
+
+  // Navigation handlers
+  const handleTotalStreamersClick = () => {
+    setActiveTab('streamers');
+    setStreamerFilter('all');
+    setShowBackButton(true);
+  };
+
+  const handleActiveStreamersClick = () => {
+    setActiveTab('streamers');
+    setStreamerFilter('active');
+    setShowBackButton(true);
+  };
+
+  const handleBackToOverview = () => {
+    setActiveTab('overview');
+    setStreamerFilter('all');
+    setShowBackButton(false);
+  };
+
+  // Function to add a new streamer
+  const handleAddStreamer = (streamerData: { name: string; email: string }) => {
+    const newStreamer: Streamer = {
+      id: `streamer_${Date.now()}`,
+      name: streamerData.name,
+      email: streamerData.email,
+      agencyId: agency?.id || 'agency_001',
+      avatar: undefined,
+      isActive: true,
+      soundboardConfig: {
+        favoriteTracks: [],
+        customCategories: [],
+        volumeDefaults: 75,
+        autoplaySettings: false,
+        defaultMood: 'energetic',
+        defaultGenre: 'electronic',
+        defaultEnergyLevel: 'high',
+        theme: 'dark'
+      },
+      usageStats: {
+        totalPlayTime: 0,
+        tracksPlayed: 0,
+        lastActive: new Date().toISOString(),
+        favoriteMoods: [],
+        favoriteGenres: [],
+        peakUsageHours: []
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // Update local state
+    setStreamers(prev => [...prev, newStreamer]);
+    
+    // Save to localStorage for persistence
+    const demoStreamers = JSON.parse(localStorage.getItem('demo_streamers') || '[]');
+    demoStreamers.push(newStreamer);
+    localStorage.setItem('demo_streamers', JSON.stringify(demoStreamers));
+    
+    setShowAddStreamerModal(false);
+  };
 
   // Mock data for development
   useEffect(() => {
@@ -42,7 +139,50 @@ const AgencyDashboard: React.FC = () => {
       features: ['upload_tracks', 'manage_users', 'analytics']
     };
 
-    const mockStreamers: Streamer[] = [
+    // Load demo streamers from localStorage if available
+    const demoStreamersData = localStorage.getItem('demo_streamers');
+    let mockStreamers: Streamer[] = [];
+    
+    if (demoStreamersData) {
+      try {
+        const demoStreamers = JSON.parse(demoStreamersData);
+        // Use the saved streamers directly if they have all required fields
+        mockStreamers = demoStreamers.map((demo: any) => ({
+          id: demo.id,
+          name: demo.name,
+          email: demo.email,
+          agencyId: demo.agencyId || 'agency_001',
+          avatar: demo.avatar,
+          isActive: demo.isActive !== undefined ? demo.isActive : true,
+          soundboardConfig: demo.soundboardConfig || {
+            favoriteTracks: [],
+            customCategories: [],
+            volumeDefaults: 75,
+            autoplaySettings: false,
+            defaultMood: 'energetic',
+            defaultGenre: 'electronic',
+            defaultEnergyLevel: 'high',
+            theme: 'dark'
+          },
+          usageStats: demo.usageStats || {
+            totalPlayTime: 0,
+            tracksPlayed: 0,
+            lastActive: new Date().toISOString(),
+            favoriteMoods: [],
+            favoriteGenres: [],
+            peakUsageHours: []
+          },
+          createdAt: demo.createdAt || new Date().toISOString(),
+          updatedAt: demo.updatedAt || new Date().toISOString()
+        }));
+      } catch (e) {
+        console.error('Failed to parse demo streamers:', e);
+      }
+    }
+
+    // Add default mock streamers if no demo data
+    if (mockStreamers.length === 0) {
+      mockStreamers = [
       {
         id: 'streamer_001',
         name: 'Alex Gaming',
@@ -100,6 +240,7 @@ const AgencyDashboard: React.FC = () => {
         updatedAt: new Date().toISOString()
       }
     ];
+  }
 
     // Apply plan-based client limits
     let limitedStreamers = mockStreamers;
@@ -118,8 +259,27 @@ const AgencyDashboard: React.FC = () => {
     setShowStreamerProfile(true);
   };
 
+  const handleManageSoundboard = (streamer: Streamer) => {
+    setSelectedStreamer(streamer);
+    setShowSoundboardManager(true);
+  };
+
+  const handleViewStats = (streamer: Streamer) => {
+    setSelectedStreamerForStats(streamer);
+    setShowStatsModal(true);
+  };
+
   const handleStreamerSave = (updatedStreamer: Streamer) => {
+    // Update local state
     setStreamers(prev => prev.map(s => s.id === updatedStreamer.id ? updatedStreamer : s));
+    
+    // Save to localStorage for persistence
+    const demoStreamers = JSON.parse(localStorage.getItem('demo_streamers') || '[]');
+    const updatedDemoStreamers = demoStreamers.map((s: any) => 
+      s.id === updatedStreamer.id ? updatedStreamer : s
+    );
+    localStorage.setItem('demo_streamers', JSON.stringify(updatedDemoStreamers));
+    
     setShowStreamerProfile(false);
     setSelectedStreamer(null);
   };
@@ -196,6 +356,17 @@ const AgencyDashboard: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
+              {showBackButton && (
+                <button
+                  onClick={handleBackToOverview}
+                  className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  <span>Back to Overview</span>
+                </button>
+              )}
               <div className="h-8 w-8 rounded bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
                 VS
               </div>
@@ -203,7 +374,10 @@ const AgencyDashboard: React.FC = () => {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-gray-300">Active Streamers: {streamers.filter(s => s.isActive).length}</span>
-              <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+              <button 
+                onClick={() => setShowAddStreamerModal(true)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
                 Add Streamer
               </button>
             </div>
@@ -257,34 +431,127 @@ const AgencyDashboard: React.FC = () => {
               transition={{ duration: 0.3 }}
             >
               <div className="space-y-6">
-                <h2 className="text-3xl font-bold text-white">Agency Overview</h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-3xl font-bold text-white">Agency Overview</h2>
+                  <button
+                    onClick={() => {
+                      // Restore demo data
+                      const demoStreamers = [
+                        { 
+                          id: 'streamer_1', 
+                          name: 'Alex "NightRider" Chen', 
+                          email: 'alex.chen@example.com',
+                          agencyId: 'agency_001',
+                          isActive: true,
+                          soundboardConfig: {
+                            favoriteTracks: [],
+                            customCategories: [],
+                            volumeDefaults: 75,
+                            autoplaySettings: false,
+                            defaultMood: 'energetic',
+                            defaultGenre: 'electronic',
+                            defaultEnergyLevel: 'high',
+                            theme: 'dark'
+                          },
+                          usageStats: {
+                            totalPlayTime: 0,
+                            tracksPlayed: 0,
+                            lastActive: new Date().toISOString(),
+                            favoriteMoods: [],
+                            favoriteGenres: [],
+                            peakUsageHours: []
+                          },
+                          createdAt: new Date().toISOString(),
+                          updatedAt: new Date().toISOString()
+                        }
+                      ];
+                      localStorage.setItem('demo_streamers', JSON.stringify(demoStreamers));
+                      window.location.reload();
+                    }}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                    title="Restore Demo Data"
+                  >
+                    🔄 Restore Demo Data
+                  </button>
+                </div>
                 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                    <h3 className="text-lg font-medium text-gray-300">Total Streamers</h3>
-                    <p className="text-3xl font-bold text-white">{streamers.length}</p>
+                  <button 
+                    onClick={handleTotalStreamersClick}
+                    className="bg-gray-800 p-6 rounded-lg border border-gray-700 hover:bg-gray-700 transition-colors text-left group"
+                  >
+                    <h3 className="text-lg font-medium text-gray-300 group-hover:text-white">Total Streamers</h3>
+                    <p className="text-3xl font-bold text-white group-hover:text-blue-400">{streamers.length}</p>
                     {featureFlags && featureFlags.maxClients > 0 && featureFlags.maxClients !== -1 && (
                       <p className="text-xs text-gray-400 mt-1">Max: {featureFlags.maxClients}</p>
                     )}
-                  </div>
-                  <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                    <h3 className="text-lg font-medium text-gray-300">Active Streamers</h3>
-                    <p className="text-3xl font-bold text-green-400">{streamers.filter(s => s.isActive).length}</p>
-                  </div>
+                  </button>
+                  <button 
+                    onClick={handleActiveStreamersClick}
+                    className="bg-gray-800 p-6 rounded-lg border border-gray-700 hover:bg-gray-700 transition-colors text-left group"
+                  >
+                    <h3 className="text-lg font-medium text-gray-300 group-hover:text-white">Active Streamers</h3>
+                    <p className="text-3xl font-bold text-green-400 group-hover:text-green-300">{streamers.filter(s => s.isActive).length}</p>
+                  </button>
                   <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
                     <h3 className="text-lg font-medium text-gray-300">Total Play Time</h3>
                     <p className="text-3xl font-bold text-blue-400">
-                      {Math.round(streamers.reduce((acc, s) => acc + s.usageStats.totalPlayTime, 0) / 3600)}h
+                      {agencyStats ? Math.round(agencyStats.totalPlayTime / 3600) : 0}h
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {agencyStats ? Math.round(agencyStats.totalPlayTime / 60) % 60 : 0}m
                     </p>
                   </div>
                   <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
                     <h3 className="text-lg font-medium text-gray-300">Tracks Played</h3>
                     <p className="text-3xl font-bold text-purple-400">
-                      {streamers.reduce((acc, s) => acc + s.usageStats.tracksPlayed, 0)}
+                      {agencyStats ? agencyStats.totalTracks : 0}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Last active: {agencyStats ? new Date(agencyStats.lastActive).toLocaleDateString() : 'Never'}
                     </p>
                   </div>
                 </div>
+
+                {/* Performance Grid */}
+                {agencyStats && (
+                  <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
+                    <h3 className="text-xl font-semibold text-white mb-4">Performance Analytics</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div>
+                        <h4 className="text-lg font-medium text-gray-300 mb-2">Favorite Moods</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {agencyStats.favoriteMoods.slice(0, 5).map((mood, index) => (
+                            <span key={index} className="px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded-full">
+                              {mood}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-medium text-gray-300 mb-2">Favorite Genres</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {agencyStats.favoriteGenres.slice(0, 5).map((genre, index) => (
+                            <span key={index} className="px-2 py-1 bg-green-600/20 text-green-400 text-xs rounded-full">
+                              {genre}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-medium text-gray-300 mb-2">Peak Usage Hours</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {Array.from(new Set(agencyStats.peakUsageHours)).slice(0, 5).map((hour, index) => (
+                            <span key={index} className="px-2 py-1 bg-purple-600/20 text-purple-400 text-xs rounded-full">
+                              {hour}:00
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Recent Activity */}
                 <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
@@ -293,7 +560,7 @@ const AgencyDashboard: React.FC = () => {
                     {streamers.slice(0, 3).map((streamer) => (
                       <div key={streamer.id} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
                         <div className="flex items-center space-x-3">
-                                                  <PlaceholderAvatar name={streamer.name} size="sm" />
+                          <PlaceholderAvatar name={streamer.name} size="sm" />
                           <span className="text-white font-medium">{streamer.name}</span>
                         </div>
                         <span className="text-gray-400 text-sm">
@@ -318,46 +585,141 @@ const AgencyDashboard: React.FC = () => {
               <div className="space-y-6">
                 <h2 className="text-3xl font-bold text-white">Streamer Management</h2>
                 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {streamers.map((streamer) => (
+                {/* Filter Section */}
+                <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                  <div className="flex items-center space-x-4">
+                    <span className="text-gray-300">Filter:</span>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => setStreamerFilter('all')}
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                          streamerFilter === 'all'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        }`}
+                      >
+                        All ({streamers.length})
+                      </button>
+                      <button
+                        onClick={() => setStreamerFilter('active')}
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                          streamerFilter === 'active'
+                            ? 'bg-green-600 text-white'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        }`}
+                      >
+                        Active ({streamers.filter(s => s.isActive).length})
+                      </button>
+                      <button
+                        onClick={() => setStreamerFilter('inactive')}
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                          streamerFilter === 'inactive'
+                            ? 'bg-red-600 text-white'
+                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        }`}
+                      >
+                        Inactive ({streamers.filter(s => !s.isActive).length})
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-6">
+                  {streamers.filter(streamer => {
+                    if (streamerFilter === 'active') return streamer.isActive;
+                    if (streamerFilter === 'inactive') return !streamer.isActive;
+                    return true;
+                  }).map((streamer) => (
                     <div key={streamer.id} className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                      <div className="flex items-center space-x-4 mb-4">
-                                              <PlaceholderAvatar name={streamer.name} size="lg" />
-                        <div>
-                          <h3 className="text-xl font-semibold text-white">{streamer.name}</h3>
-                          <p className="text-gray-400">{streamer.email}</p>
-                        </div>
-                        <div className={`ml-auto px-3 py-1 rounded-full text-sm font-medium ${
-                          streamer.isActive 
-                            ? 'bg-green-900 text-green-300' 
-                            : 'bg-red-900 text-red-300'
-                        }`}>
-                          {streamer.isActive ? 'Active' : 'Inactive'}
+                      <div className="flex items-start space-x-4 mb-6">
+                        <PlaceholderAvatar name={streamer.name} size="lg" />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <div>
+                              <h3 className="text-xl font-semibold text-white">{streamer.name}</h3>
+                              <p className="text-gray-400">{streamer.email}</p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {getAssignedCollectionsCount(streamer.id) > 0 && (
+                                <span className="px-2 py-1 bg-purple-600/20 text-purple-400 text-xs rounded-full font-medium">
+                                  {getAssignedCollectionsCount(streamer.id)} collection{getAssignedCollectionsCount(streamer.id) !== 1 ? 's' : ''}
+                                </span>
+                              )}
+                              <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                streamer.isActive 
+                                  ? 'bg-green-900 text-green-300' 
+                                  : 'bg-red-900 text-red-300'
+                              }`}>
+                                {streamer.isActive ? 'Active' : 'Inactive'}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                              <p className="text-gray-400 text-sm">Total Play Time</p>
+                              <p className="text-white">
+                                {(() => {
+                                  const stats = usageStatsService.getStreamerStats(streamer.id);
+                                  return stats ? Math.round(stats.totalPlayTime / 3600) : 0;
+                                })()}h
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 text-sm">Tracks Played</p>
+                              <p className="text-white">
+                                {(() => {
+                                  const stats = usageStatsService.getStreamerStats(streamer.id);
+                                  return stats ? stats.trackCount : 0;
+                                })()}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 text-sm">Last Active</p>
+                              <p className="text-white">
+                                {(() => {
+                                  const stats = usageStatsService.getStreamerStats(streamer.id);
+                                  return stats ? new Date(stats.lastActive).toLocaleDateString() : 'Never';
+                                })()}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 text-sm">Favorite Mood</p>
+                              <p className="text-white">{streamer.soundboardConfig.defaultMood}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex space-x-2">
+                            <button 
+                              onClick={() => handleStreamerEdit(streamer)}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              onClick={() => handleManageSoundboard(streamer)}
+                              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                            >
+                              Manage Soundboard
+                            </button>
+                            <button 
+                              onClick={() => handleViewStats(streamer)}
+                              className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                            >
+                              View Stats
+                            </button>
+                          </div>
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <p className="text-gray-400 text-sm">Favorite Mood</p>
-                          <p className="text-white">{streamer.soundboardConfig.defaultMood}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-400 text-sm">Total Play Time</p>
-                          <p className="text-white">{Math.round(streamer.usageStats.totalPlayTime / 3600)}h</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex space-x-2">
-                        <button 
-                          onClick={() => handleStreamerEdit(streamer)}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                        >
-                          Edit
-                        </button>
-                        <button className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors">
-                          View Stats
-                        </button>
-                      </div>
+                      {/* Assigned Collections Panel */}
+                      <StreamerAssignedCollections 
+                        streamer={streamer}
+                        onCollectionUnassign={(collectionId) => {
+                          // Refresh the assigned collections when a collection is unassigned
+                          console.log(`Collection ${collectionId} unassigned from ${streamer.name}`);
+                        }}
+                      />
                     </div>
                   ))}
                 </div>
@@ -431,6 +793,66 @@ const AgencyDashboard: React.FC = () => {
             streamer={selectedStreamer}
             onSave={handleStreamerSave}
             onClose={handleStreamerClose}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Add Streamer Modal */}
+      <AnimatePresence>
+        {showAddStreamerModal && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-gray-900 rounded-2xl p-6 w-full max-w-md"
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white">Add New Streamer</h2>
+                <button
+                  onClick={() => setShowAddStreamerModal(false)}
+                  className="text-gray-400 hover:text-white transition-colors text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <AddStreamerForm onSubmit={handleAddStreamer} onCancel={() => setShowAddStreamerModal(false)} />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Streamer Soundboard Manager Modal */}
+      <AnimatePresence>
+        {showSoundboardManager && selectedStreamer && (
+          <StreamerSoundboardManager
+            streamer={selectedStreamer}
+            onClose={() => {
+              setShowSoundboardManager(false);
+              setSelectedStreamer(null);
+            }}
+            onStreamerUpdate={(updatedStreamer) => {
+              setStreamers(prev => prev.map(s => s.id === updatedStreamer.id ? updatedStreamer : s));
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Streamer Stats Modal */}
+      <AnimatePresence>
+        {showStatsModal && selectedStreamerForStats && (
+          <StreamerStatsModal
+            streamer={selectedStreamerForStats}
+            onClose={() => {
+              setShowStatsModal(false);
+              setSelectedStreamerForStats(null);
+            }}
           />
         )}
       </AnimatePresence>

@@ -1,5 +1,6 @@
 import { StreamingTrack } from '../types/track';
 import trackStorageService from './trackStorageService';
+import usageStatsService from './usageStatsService';
 
 export interface AudioSettings {
   volume: number;
@@ -22,6 +23,7 @@ export interface AudioState {
   duration: number;
   isLooping: boolean;
   loopCount: number;
+  isBuffering: boolean;
 }
 
 export interface AudioEventCallbacks {
@@ -33,6 +35,8 @@ export interface AudioEventCallbacks {
   onError?: (error: string) => void;
   onFadeStart?: (type: 'in' | 'out', duration: number) => void;
   onFadeComplete?: (type: 'in' | 'out') => void;
+  onBufferingStart?: () => void;
+  onBufferingEnd?: () => void;
 }
 
 class UnifiedAudioController {
@@ -42,6 +46,7 @@ class UnifiedAudioController {
   private volume: number = 50;
   private currentTime: number = 0;
   private duration: number = 0;
+  private isBuffering: boolean = false;
   private eventCallbacks: AudioEventCallbacks = {};
   private stopListeners: Map<string, () => void> = new Map();
   private fadeInterval: number | null = null;
@@ -60,12 +65,16 @@ class UnifiedAudioController {
   private currentLoopCount: number = 0;
 
   constructor() {
-    this.initializeAudioElement();
+    // Skip DOM work in non-browser contexts
+    if (typeof document !== 'undefined') {
+      this.initializeAudioElement();
+    }
   }
 
   private initializeAudioElement() {
     // Create hidden audio element
-    this.audioElement = document.createElement('audio');
+    this.audioElement = (typeof document !== 'undefined') ? document.createElement('audio') : null;
+    if (!this.audioElement) return;
     this.audioElement.style.display = 'none';
     this.audioElement.preload = 'metadata';
     
@@ -76,9 +85,14 @@ class UnifiedAudioController {
     this.audioElement.addEventListener('error', this.handleError.bind(this));
     this.audioElement.addEventListener('play', this.handlePlay.bind(this));
     this.audioElement.addEventListener('pause', this.handlePause.bind(this));
+    this.audioElement.addEventListener('waiting', this.handleWaiting.bind(this));
+    this.audioElement.addEventListener('canplay', this.handleCanPlay.bind(this));
+    this.audioElement.addEventListener('stalled', this.handleStalled.bind(this));
     
     // Add to DOM
-    document.body.appendChild(this.audioElement);
+    if (typeof document !== 'undefined') {
+      document.body.appendChild(this.audioElement);
+    }
     
     // Set initial volume
     this.setVolume(this.volume);
@@ -261,7 +275,8 @@ class UnifiedAudioController {
       currentTime: this.currentTime,
       duration: this.duration,
       isLooping: this.settings.loopEnabled,
-      loopCount: this.currentLoopCount
+      loopCount: this.currentLoopCount,
+      isBuffering: this.isBuffering
     };
   }
 
@@ -279,6 +294,10 @@ class UnifiedAudioController {
 
   public getDuration(): number {
     return this.duration;
+  }
+
+  public isCurrentlyBuffering(): boolean {
+    return this.isBuffering;
   }
 
   // Fade effects
@@ -434,9 +453,22 @@ class UnifiedAudioController {
       
       // Update current track reference
       this.currentTrack = updatedTrack;
+      
+      // Track usage for current streamer (if available)
+      const currentStreamerId = this.getCurrentStreamerId();
+      if (currentStreamerId) {
+        usageStatsService.trackUsage(currentStreamerId, track);
+      }
     } catch (error) {
       console.error('Error updating usage tracking:', error);
     }
+  }
+
+  private getCurrentStreamerId(): string | null {
+    // Try to get current streamer ID from various sources
+    // This could be from a context, localStorage, or passed as parameter
+    const streamerId = localStorage.getItem('current_streamer_id');
+    return streamerId || null;
   }
 
   // Private methods
@@ -512,6 +544,21 @@ class UnifiedAudioController {
   private handlePause(): void {
     this.isPlaying = false;
     this.notifyEventCallbacks('onPlayStateChange', this.isPlaying);
+  }
+
+  private handleWaiting(): void {
+    this.isBuffering = true;
+    this.notifyEventCallbacks('onBufferingStart');
+  }
+
+  private handleCanPlay(): void {
+    this.isBuffering = false;
+    this.notifyEventCallbacks('onBufferingEnd');
+  }
+
+  private handleStalled(): void {
+    this.isBuffering = true;
+    this.notifyEventCallbacks('onBufferingStart');
   }
 
   private notifyEventCallbacks(event: keyof AudioEventCallbacks, ...args: any[]): void {

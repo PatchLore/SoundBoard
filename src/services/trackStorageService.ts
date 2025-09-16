@@ -1,4 +1,5 @@
 import { StreamingTrack } from '../types/track';
+import assignmentsBackupService from './assignmentsBackupService';
 
 export interface TrackCollection {
   id: string;
@@ -28,11 +29,14 @@ class TrackStorageService {
   };
 
   constructor() {
-    this.initializeStorage();
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      this.initializeStorage();
+    }
   }
 
   private initializeStorage(): void {
     // Initialize storage if it doesn't exist
+    if (typeof localStorage === 'undefined') return;
     if (!localStorage.getItem(this.STORAGE_KEYS.TRACKS)) {
       localStorage.setItem(this.STORAGE_KEYS.TRACKS, JSON.stringify([]));
     }
@@ -53,6 +57,8 @@ class TrackStorageService {
 
   // Track Management
   public saveTrack(track: StreamingTrack): void {
+    if (typeof localStorage === 'undefined') return;
+    try { assignmentsBackupService.backup('save_track'); } catch {}
     const tracks = this.getAllTracks();
     const existingIndex = tracks.findIndex(t => t.id === track.id);
     
@@ -87,6 +93,7 @@ class TrackStorageService {
 
   public getAllTracks(): StreamingTrack[] {
     try {
+      if (typeof localStorage === 'undefined') return [];
       const tracksData = localStorage.getItem(this.STORAGE_KEYS.TRACKS);
       return tracksData ? JSON.parse(tracksData) : [];
     } catch (error) {
@@ -96,6 +103,8 @@ class TrackStorageService {
   }
 
   public deleteTrack(trackId: string): boolean {
+    if (typeof localStorage === 'undefined') return false;
+    try { assignmentsBackupService.backup('delete_track'); } catch {}
     const tracks = this.getAllTracks();
     const filteredTracks = tracks.filter(t => t.id !== trackId);
     
@@ -138,6 +147,7 @@ class TrackStorageService {
 
   // Recently Generated Tracks
   private addToRecentlyGenerated(trackId: string): void {
+    if (typeof localStorage === 'undefined') return;
     const recent = this.getRecentlyGenerated();
     const filtered = recent.filter(id => id !== trackId);
     filtered.unshift(trackId);
@@ -151,6 +161,7 @@ class TrackStorageService {
   }
 
   private removeFromRecentlyGenerated(trackId: string): void {
+    if (typeof localStorage === 'undefined') return;
     const recent = this.getRecentlyGenerated();
     const filtered = recent.filter(id => id !== trackId);
     localStorage.setItem(this.STORAGE_KEYS.RECENTLY_GENERATED, JSON.stringify(filtered));
@@ -158,6 +169,7 @@ class TrackStorageService {
 
   public getRecentlyGenerated(): string[] {
     try {
+      if (typeof localStorage === 'undefined') return [];
       const recentData = localStorage.getItem(this.STORAGE_KEYS.RECENTLY_GENERATED);
       return recentData ? JSON.parse(recentData) : [];
     } catch (error) {
@@ -178,6 +190,16 @@ class TrackStorageService {
 
   // Client Management
   public createClient(name: string, description?: string): Client {
+    if (typeof localStorage === 'undefined') {
+      return {
+        id: `client_${Date.now()}`,
+        name,
+        description,
+        collections: [],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+    }
     const clients = this.getAllClients();
     const newClient: Client = {
       id: `client_${Date.now()}`,
@@ -189,6 +211,7 @@ class TrackStorageService {
     };
     
     clients.push(newClient);
+    try { assignmentsBackupService.backup('create_client'); } catch {}
     localStorage.setItem(this.STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
     
     console.log(`👥 Client created: ${name}`);
@@ -197,6 +220,7 @@ class TrackStorageService {
 
   public getAllClients(): Client[] {
     try {
+      if (typeof localStorage === 'undefined') return [];
       const clientsData = localStorage.getItem(this.STORAGE_KEYS.CLIENTS);
       return clientsData ? JSON.parse(clientsData) : [];
     } catch (error) {
@@ -211,6 +235,8 @@ class TrackStorageService {
   }
 
   public updateClient(clientId: string, updates: Partial<Client>): boolean {
+    if (typeof localStorage === 'undefined') return false;
+    try { assignmentsBackupService.backup('update_client'); } catch {}
     const clients = this.getAllClients();
     const index = clients.findIndex(c => c.id === clientId);
     
@@ -224,6 +250,8 @@ class TrackStorageService {
   }
 
   public deleteClient(clientId: string): boolean {
+    if (typeof localStorage === 'undefined') return false;
+    try { assignmentsBackupService.backup('delete_client'); } catch {}
     const clients = this.getAllClients();
     const filtered = clients.filter(c => c.id !== clientId);
     
@@ -237,9 +265,13 @@ class TrackStorageService {
 
   // Collection Management
   public createCollection(clientId: string, name: string, description?: string): TrackCollection | null {
-    const client = this.getClient(clientId);
-    if (!client) return null;
+    if (typeof localStorage === 'undefined') return null;
+    try { assignmentsBackupService.backup('create_collection'); } catch {}
+    const clients = this.getAllClients();
+    const clientIndex = clients.findIndex(c => c.id === clientId);
+    if (clientIndex < 0) return null;
     
+    const client = clients[clientIndex];
     const newCollection: TrackCollection = {
       id: `collection_${Date.now()}`,
       name,
@@ -252,12 +284,16 @@ class TrackStorageService {
     client.collections.push(newCollection);
     client.updatedAt = new Date();
     
-    this.updateClient(clientId, client);
+    // Update the client in the clients array and save to localStorage
+    clients[clientIndex] = client;
+    localStorage.setItem(this.STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
     console.log(`📁 Collection created: ${name} for client ${client.name}`);
     return newCollection;
   }
 
   public addTrackToCollection(collectionId: string, trackId: string): boolean {
+    if (typeof localStorage === 'undefined') return false;
+    try { assignmentsBackupService.backup('add_track_to_collection'); } catch {}
     const clients = this.getAllClients();
     
     for (const client of clients) {
@@ -268,9 +304,14 @@ class TrackStorageService {
           collection.updatedAt = new Date();
           client.updatedAt = new Date();
           
-          this.updateClient(client.id, client);
-          console.log(`📁 Track added to collection: ${trackId} -> ${collection.name}`);
-          return true;
+          // Update the client in the clients array and save to localStorage
+          const clientIndex = clients.findIndex(c => c.id === client.id);
+          if (clientIndex >= 0) {
+            clients[clientIndex] = client;
+            localStorage.setItem(this.STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
+            console.log(`📁 Track added to collection: ${trackId} -> ${collection.name}`);
+            return true;
+          }
         }
         break;
       }
@@ -279,6 +320,8 @@ class TrackStorageService {
   }
 
   public removeTrackFromCollection(collectionId: string, trackId: string): boolean {
+    if (typeof localStorage === 'undefined') return false;
+    try { assignmentsBackupService.backup('remove_track_from_collection'); } catch {}
     const clients = this.getAllClients();
     
     for (const client of clients) {
@@ -290,9 +333,14 @@ class TrackStorageService {
           collection.updatedAt = new Date();
           client.updatedAt = new Date();
           
-          this.updateClient(client.id, client);
-          console.log(`📁 Track removed from collection: ${trackId} <- ${collection.name}`);
-          return true;
+          // Update the client in the clients array and save to localStorage
+          const clientIndex = clients.findIndex(c => c.id === client.id);
+          if (clientIndex >= 0) {
+            clients[clientIndex] = client;
+            localStorage.setItem(this.STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
+            console.log(`📁 Track removed from collection: ${trackId} <- ${collection.name}`);
+            return true;
+          }
         }
         break;
       }
@@ -303,6 +351,7 @@ class TrackStorageService {
   // Settings
   public getSettings(): any {
     try {
+      if (typeof localStorage === 'undefined') return {};
       const settingsData = localStorage.getItem(this.STORAGE_KEYS.SETTINGS);
       return settingsData ? JSON.parse(settingsData) : {};
     } catch (error) {
@@ -312,6 +361,7 @@ class TrackStorageService {
   }
 
   public updateSettings(updates: any): void {
+    if (typeof localStorage === 'undefined') return;
     const settings = this.getSettings();
     const updated = { ...settings, ...updates };
     localStorage.setItem(this.STORAGE_KEYS.SETTINGS, JSON.stringify(updated));
@@ -331,6 +381,7 @@ class TrackStorageService {
 
   public importData(data: string): boolean {
     try {
+      if (typeof localStorage === 'undefined') return false;
       const parsed = JSON.parse(data);
       
       if (parsed.tracks) {
@@ -353,6 +404,7 @@ class TrackStorageService {
 
   // Cleanup
   public clearAllData(): void {
+    if (typeof localStorage === 'undefined') return;
     localStorage.removeItem(this.STORAGE_KEYS.TRACKS);
     localStorage.removeItem(this.STORAGE_KEYS.CLIENTS);
     localStorage.removeItem(this.STORAGE_KEYS.RECENTLY_GENERATED);

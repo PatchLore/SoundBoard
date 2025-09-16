@@ -28,13 +28,46 @@ Object.defineProperty(window, 'matchMedia', {
 // This keeps component structure while disabling animations.
 jest.mock('framer-motion', () => {
   const React = require('react');
-  const Noop = React.forwardRef((props: any, ref: any) =>
-    React.createElement('div', { ...props, ref }, props.children)
-  );
+  const Noop = React.forwardRef((props: any, ref: any) => {
+    // Filter out framer-motion specific props to avoid React warnings
+    const { 
+      whileHover, 
+      whileTap, 
+      animate, 
+      initial, 
+      exit, 
+      onHoverStart, 
+      onHoverEnd, 
+      layout,
+      ...filteredProps 
+    } = props;
+    
+    // Preserve the element type (button, div, etc.)
+    const elementType = props.as || 'div';
+    return React.createElement(elementType, { ...filteredProps, ref }, props.children);
+  });
   const motionProxy = new Proxy(
     {},
     {
-      get: () => Noop,
+      get: (target, prop) => {
+        if (prop === 'button') {
+          return React.forwardRef((props: any, ref: any) => {
+            const { 
+              whileHover, 
+              whileTap, 
+              animate, 
+              initial, 
+              exit, 
+              onHoverStart, 
+              onHoverEnd, 
+              layout,
+              ...filteredProps 
+            } = props;
+            return React.createElement('button', { ...filteredProps, ref }, props.children);
+          });
+        }
+        return Noop;
+      },
     }
   );
   return {
@@ -78,35 +111,39 @@ Object.defineProperty(window, 'Audio', {
 URL.createObjectURL = jest.fn(() => 'mocked-url');
 URL.revokeObjectURL = jest.fn();
 
-// Mock console methods to reduce test noise
-const originalError = console.error;
-const originalWarn = console.warn;
+// Suppress specific React warnings that are expected in tests
+// const originalError = console.error;
+// const originalWarn = console.warn;
 
-beforeAll(() => {
-  console.error = (...args: any[]) => {
-    if (
-      typeof args[0] === 'string' &&
-      args[0].includes('Warning: ReactDOM.render is deprecated')
-    ) {
-      return;
-    }
-    originalError.call(console, ...args);
-  };
+// beforeAll(() => {
+//   console.error = (...args: any[]) => {
+//     // Only suppress specific React warnings, let others through for debugging
+//     if (
+//       typeof args[0] === 'string' &&
+//       (args[0].includes('Warning: ReactDOM.render is deprecated') ||
+//        args[0].includes('Warning: An update to') ||
+//        args[0].includes('Warning: componentWillReceiveProps') ||
+//        args[0].includes('Warning: componentWillUpdate'))
+//     ) {
+//       return;
+//     }
+//     originalError.call(console, ...args);
+//   };
   
-  console.warn = (...args: any[]) => {
-    if (
-      typeof args[0] === 'string' &&
-      (args[0].includes('Warning: componentWillReceiveProps') ||
-       args[0].includes('Warning: componentWillUpdate'))
-    ) {
-      return;
-    }
-    originalWarn.call(console, ...args);
-  };
-});
+//   console.warn = (...args: any[]) => {
+//     if (
+//       typeof args[0] === 'string' &&
+//       (args[0].includes('Warning: componentWillReceiveProps') ||
+//        args[0].includes('Warning: componentWillUpdate'))
+//     ) {
+//       return;
+//     }
+//     originalWarn.call(console, ...args);
+//   };
+// });
 
-afterAll(() => {
-  console.error = originalError;
-  console.warn = originalWarn;
-});
+// afterAll(() => {
+//   console.error = originalError;
+//   console.warn = originalWarn;
+// });
 

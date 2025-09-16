@@ -207,48 +207,75 @@ const ProfessionalAudioDashboard: React.FC = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="flex-1 px-4 py-3 bg-gray-800 border border-gray-600 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    aria-label="Search tracks, tags, and descriptions"
+                    role="searchbox"
+                    aria-describedby="search-help"
                   />
+                  <div id="search-help" className="sr-only">
+                    Search through track titles, artist names, tags, and descriptions
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" role="group" aria-label="Filter controls">
                   {/* Mood Filter */}
-                  <select
-                    value={selectedMood}
-                    onChange={(e) => setSelectedMood(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  >
+                  <div>
+                    <label htmlFor="mood-filter" className="sr-only">
+                      Filter by mood
+                    </label>
+                    <select
+                      id="mood-filter"
+                      value={selectedMood}
+                      onChange={(e) => setSelectedMood(e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      aria-label="Filter tracks by mood"
+                    >
                     {moods.map(mood => (
                       <option key={mood} value={mood} className="bg-gray-800 text-white">
                         {mood === 'all' ? 'All Moods' : mood.charAt(0).toUpperCase() + mood.slice(1)}
                       </option>
                     ))}
-                  </select>
+                    </select>
+                  </div>
 
                   {/* Category Filter */}
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  >
+                  <div>
+                    <label htmlFor="category-filter" className="sr-only">
+                      Filter by category
+                    </label>
+                    <select
+                      id="category-filter"
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      aria-label="Filter tracks by category"
+                    >
                     {categories.map(category => (
                       <option key={category} value={category} className="bg-gray-800 text-white">
                         {category === 'all' ? 'All Categories' : formatCategoryName(category)}
                       </option>
                     ))}
-                  </select>
+                    </select>
+                  </div>
 
                   {/* Energy Level Filter */}
-                  <select
-                    value={selectedEnergy}
-                    onChange={(e) => setSelectedEnergy(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  >
+                  <div>
+                    <label htmlFor="energy-filter" className="sr-only">
+                      Filter by energy level
+                    </label>
+                    <select
+                      id="energy-filter"
+                      value={selectedEnergy}
+                      onChange={(e) => setSelectedEnergy(e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                      aria-label="Filter tracks by energy level"
+                    >
                     {energyLevels.map(energy => (
                       <option key={energy} value={energy} className="bg-gray-800 text-white">
                         {energy === 'all' ? 'All Energy Levels' : energy.charAt(0).toUpperCase() + energy.slice(1)}
                       </option>
                     ))}
-                  </select>
+                    </select>
+                  </div>
 
                   {/* Results Count */}
                   <div className="flex items-center justify-center px-4 py-3 bg-gray-800 border border-gray-600 rounded-2xl">

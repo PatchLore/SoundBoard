@@ -46,13 +46,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   };
 
   const getStats = () => {
-    if (!tracks) {
-      return { total: 0, approved: 0, pending: 0, categories: 0 };
-    }
-    const total = tracks.length;
-    const approved = tracks.filter(t => t.approved).length;
-    const pending = tracks.filter(t => !t.approved).length;
-    const categories = new Set(tracks.map(t => t.category)).size;
+    const safeTracks = Array.isArray(tracks) ? tracks : [];
+    const total = safeTracks.length;
+    const approved = safeTracks.filter(t => t.approved).length;
+    const pending = safeTracks.filter(t => !t.approved).length;
+    const categories = new Set(safeTracks.map(t => t.category)).size;
     
     return { total, approved, pending, categories };
   };
@@ -161,7 +159,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto mb-4"></div>
                 <p className="text-gray-400">Loading tracks...</p>
               </div>
-            ) : !tracks || tracks.length === 0 ? (
+            ) : (tracks || []).length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">🎵</div>
                 <h3 className="text-lg font-semibold text-white mb-2">No tracks yet</h3>

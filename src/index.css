@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+
+
 /* Optional: smooth dark background for the whole app */
 body {
   @apply bg-gray-950 text-gray-100;
@@ -15,6 +17,8 @@ body {
   position: absolute !important;
   overflow: hidden !important;
 }
+
+
 
 /* Enhanced Input Field Styling for Better Text Visibility */
 @layer components {

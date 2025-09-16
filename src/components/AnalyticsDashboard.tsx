@@ -24,16 +24,16 @@ const AnalyticsDashboard: React.FC = () => {
   const loadAnalyticsData = () => {
     const events = analyticsService.getEvents();
     const sessionId = analyticsService.getSessionId();
+    const performanceMetrics = analyticsService.getPerformanceMetrics();
     
     const userInteractions = events.filter(e => e.event === 'user_interaction');
     const errors = events.filter(e => e.event === 'error');
     const performanceIssues = events.filter(e => e.event === 'performance_issue');
-    const appLoads = events.filter(e => e.event === 'app_load');
 
     setAnalyticsData({
       sessionId,
       events,
-      performanceMetrics: appLoads[0]?.data || {},
+      performanceMetrics,
       userInteractions,
       errors,
       performanceIssues
