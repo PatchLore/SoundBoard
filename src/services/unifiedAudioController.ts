@@ -1,5 +1,6 @@
 import { StreamingTrack } from '../types/track';
 import trackStorageService from './trackStorageService';
+import usageStatsService from './usageStatsService';
 
 export interface AudioSettings {
   volume: number;
@@ -452,9 +453,22 @@ class UnifiedAudioController {
       
       // Update current track reference
       this.currentTrack = updatedTrack;
+      
+      // Track usage for current streamer (if available)
+      const currentStreamerId = this.getCurrentStreamerId();
+      if (currentStreamerId) {
+        usageStatsService.trackUsage(currentStreamerId, track);
+      }
     } catch (error) {
       console.error('Error updating usage tracking:', error);
     }
+  }
+
+  private getCurrentStreamerId(): string | null {
+    // Try to get current streamer ID from various sources
+    // This could be from a context, localStorage, or passed as parameter
+    const streamerId = localStorage.getItem('current_streamer_id');
+    return streamerId || null;
   }
 
   // Private methods

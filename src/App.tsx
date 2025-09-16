@@ -8,6 +8,7 @@ import IntegrationDashboard from './components/IntegrationDashboard';
 import StreamerMode from './components/StreamerMode';
 import AuthLogin from './components/AuthLogin';
 import { MiniPlayer } from './components/Player';
+import { ToastProvider } from './components/Toast';
 import authService, { User } from './services/authService';
 // Enhanced music library with role-based access control
 
@@ -55,9 +56,17 @@ function App() {
   // Show auth login if no user
   if (showAuth) {
     return (
-      <AuthLogin 
-        onAuthSuccess={handleAuthSuccess}
-      />
+      <div className="min-h-screen bg-stream-dark flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-white mb-2">Stream Soundboard</h1>
+            <p className="text-gray-400">Professional audio management for content creators</p>
+          </div>
+          <AuthLogin 
+            onAuthSuccess={handleAuthSuccess}
+          />
+        </div>
+      </div>
     );
   }
 
@@ -67,7 +76,7 @@ function App() {
   }
 
   return (
-    <>
+    <ToastProvider>
       {/* Demo Banner */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 text-center text-sm font-medium">
         🚀 LIVE DEMO - Contact us for full version | Data resets on refresh
@@ -496,7 +505,7 @@ function App() {
       <div className="fixed bottom-4 left-4 right-4 z-50">
         <MiniPlayer showVolume={true} />
       </div>
-    </>
+    </ToastProvider>
   );
 }
 

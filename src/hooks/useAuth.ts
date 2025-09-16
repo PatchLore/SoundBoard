@@ -20,13 +20,14 @@ export function useAuth() {
     error: null
   });
 
-  // Check if user is authenticated on mount
-  useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      // Verify token is still valid
-      verifyToken(token);
-    }
+  const logout = useCallback(() => {
+    localStorage.removeItem('authToken');
+    setAuthState({
+      user: null,
+      token: null,
+      isLoading: false,
+      error: null
+    });
   }, []);
 
   const verifyToken = useCallback(async (token: string) => {
@@ -54,7 +55,16 @@ export function useAuth() {
       console.error('Token verification failed:', error);
       logout();
     }
-  }, []);
+  }, [logout]);
+
+  // Check if user is authenticated on mount
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      // Verify token is still valid
+      verifyToken(token);
+    }
+  }, [verifyToken]);
 
   const login = useCallback(async (email: string, password: string) => {
     setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
@@ -88,16 +98,6 @@ export function useAuth() {
       }));
       return { success: false, error: 'Login failed' };
     }
-  }, []);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem('authToken');
-    setAuthState({
-      user: null,
-      token: null,
-      isLoading: false,
-      error: null
-    });
   }, []);
 
   const isAuthenticated = !!authState.user && !!authState.token;

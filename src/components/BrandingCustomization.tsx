@@ -44,9 +44,9 @@ const BrandingCustomization: React.FC<BrandingCustomizationProps> = ({ agency, o
     applyBrandingToCSS(branding);
   }, [branding]);
 
-  const handleColorChange = (field: keyof AgencyBranding, value: string) => {
-    setBranding(prev => ({ ...prev, [field]: value }));
-  };
+  // const handleColorChange = (field: keyof AgencyBranding, value: string) => {
+  //   setBranding(prev => ({ ...prev, [field]: value }));
+  // };
 
   const handleSave = () => {
     // Apply branding immediately
@@ -142,7 +142,7 @@ const BrandingCustomization: React.FC<BrandingCustomizationProps> = ({ agency, o
                             // Show success feedback
                             const label = document.querySelector('label[for="logo-upload"]');
                             if (label) {
-                              const originalText = label.textContent;
+                              // const originalText = label.textContent;
                               label.textContent = 'Logo Uploaded!';
                               label.className = 'px-4 py-2 bg-green-600 text-white rounded-lg transition-colors cursor-pointer text-center';
                               setTimeout(() => {

@@ -4,7 +4,15 @@ import { Streamer } from '../types/agency';
 import { Track } from '../types/track';
 import trackManagementService from '../services/trackManagementService';
 import unifiedAudioController from '../services/unifiedAudioController';
+import streamerFavoritesService from '../services/streamerFavoritesService';
+import TrackFilterService, { TrackFilterOptions, TrackGroup as TrackGroupType } from '../services/trackFilterService';
+import TrackSourceBadge from './TrackSourceBadge';
+import TrackSearch from './TrackSearch';
+import TrackGroup from './TrackGroup';
+import TrackPagination from './TrackPagination';
+import PinnedTracks from './PinnedTracks';
 import PlaceholderAvatar from './PlaceholderAvatar';
+import { useToast } from './Toast';
 
 interface StreamerSoundboardManagerProps {
   streamer: Streamer;
@@ -23,6 +31,22 @@ const StreamerSoundboardManager: React.FC<StreamerSoundboardManagerProps> = ({
   const [loading, setLoading] = useState(true);
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
   const [currentStreamer, setCurrentStreamer] = useState<Streamer>(streamer);
+  
+  // New UX state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [groupBy, setGroupBy] = useState<'mood' | 'category' | 'collection' | 'none'>('mood');
+  const [sortBy, setSortBy] = useState<'title' | 'artist' | 'recent' | 'favorite'>('recent');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20);
+  const [filteredGroups, setFilteredGroups] = useState<TrackGroupType[]>([]);
+  const [pagination, setPagination] = useState({
+    tracks: [] as Track[],
+    totalPages: 0,
+    hasMore: false,
+    totalItems: 0
+  });
+
+  const { showToast } = useToast();
 
   const loadStreamerData = useCallback(async () => {
     try {
@@ -33,12 +57,50 @@ const StreamerSoundboardManager: React.FC<StreamerSoundboardManagerProps> = ({
       console.log('🎵 Loaded tracks:', allTracks.length, 'tracks');
       setAvailableTracks(allTracks);
       
-      // Load streamer's assigned tracks (from their favorite tracks)
-      console.log('🎵 Streamer favorite tracks:', currentStreamer.soundboardConfig.favoriteTracks);
+            // Get tracks from assigned collections and favorites
+            const assignmentsData = localStorage.getItem('music_collection_assignments');
+            let assignments: Record<string, string[]> = {};
+            try {
+              assignments = assignmentsData ? JSON.parse(assignmentsData) : {};
+              if (!assignments || typeof assignments !== 'object') assignments = {};
+            } catch {
+              assignments = {};
+            }
+            
+            // Get all clients and their collections
+            let clients: any[] = [];
+            try {
+              const clientsData = localStorage.getItem('music_clients');
+              clients = clientsData ? JSON.parse(clientsData) : [];
+              if (!Array.isArray(clients)) clients = [];
+            } catch {
+              clients = [];
+            }
+            const assignedCollectionTrackIds: string[] = [];
+            
+            clients.forEach((client: any) => {
+              client.collections.forEach((collection: any) => {
+                const assignedStreamerIds = assignments[collection.id] || [];
+                if (assignedStreamerIds.includes(currentStreamer.id)) {
+                  assignedCollectionTrackIds.push(...collection.tracks);
+                }
+              });
+            });
+            
+            // Load streamer's favorites from localStorage
+            const favoriteTrackIds = streamerFavoritesService.getFavorites(currentStreamer.id);
+      
+      // Combine all tracks for the streamer
+      const allStreamerTrackIds = [...favoriteTrackIds, ...assignedCollectionTrackIds];
+      const uniqueTrackIds = allStreamerTrackIds.filter((id, index) => allStreamerTrackIds.indexOf(id) === index);
       const streamerTracksData = allTracks.filter(track => 
-        currentStreamer.soundboardConfig.favoriteTracks.includes(track.id)
+        uniqueTrackIds.includes(track.id)
       );
-      console.log('🎵 Streamer assigned tracks:', streamerTracksData.length, 'tracks');
+      
+            console.log('🎵 Streamer total tracks:', streamerTracksData.length, 'tracks');
+            console.log('🎵 Favorite tracks:', favoriteTrackIds.length);
+            console.log('🎵 Assigned collection tracks:', assignedCollectionTrackIds.length);
+      
       setStreamerTracks(streamerTracksData);
       
     } catch (error) {
@@ -46,7 +108,7 @@ const StreamerSoundboardManager: React.FC<StreamerSoundboardManagerProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [currentStreamer.soundboardConfig.favoriteTracks]);
+  }, [currentStreamer.id]);
 
   // Update currentStreamer when streamer prop changes
   useEffect(() => {
@@ -57,63 +119,257 @@ const StreamerSoundboardManager: React.FC<StreamerSoundboardManagerProps> = ({
     loadStreamerData();
   }, [loadStreamerData]);
 
-  const addTrackToStreamer = (track: Track) => {
-    console.log('🎵 Adding track to streamer:', track.title, 'for streamer:', currentStreamer.name);
-    console.log('🎵 Current favorite tracks:', currentStreamer.soundboardConfig.favoriteTracks);
+  // Apply filters and update groups/pagination
+  const applyFilters = useCallback(() => {
+    const options: TrackFilterOptions = {
+      searchQuery,
+      groupBy,
+      sortBy,
+      itemsPerPage,
+      currentPage
+    };
+
+    const result = TrackFilterService.processTracks(streamerTracks, options);
+    setFilteredGroups(result.groups);
+    setPagination(result.pagination);
+  }, [streamerTracks, searchQuery, groupBy, sortBy, itemsPerPage, currentPage]);
+
+  // Apply filters when dependencies change
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
+
+  // Reset to first page when search or grouping changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, groupBy, sortBy]);
+
+  // Toggle favorite status for a track
+  const toggleFavorite = (track: Track) => {
+    const isFavorited = streamerFavoritesService.isFavorited(currentStreamer.id, track.id);
+    if (isFavorited) {
+      streamerFavoritesService.removeFromFavorites(currentStreamer.id, track.id);
+      // If the track isn't also present via assigned collections, optimistically remove from UI
+      if (!isTrackFromAssignedCollections(track.id)) {
+        setStreamerTracks(prev => prev.filter(t => t.id !== track.id));
+      }
+    } else {
+      streamerFavoritesService.addToFavorites(currentStreamer.id, track.id);
+      // Ensure it appears in the assigned list immediately
+      setStreamerTracks(prev => (prev.some(t => t.id === track.id) ? prev : [...prev, track]));
+    }
+  };
+
+  // Get track source (agency or streamer)
+  const getTrackSource = (track: Track): 'agency' | 'streamer' => {
+    const isFavorited = streamerFavoritesService.isFavorited(currentStreamer.id, track.id);
+    return isFavorited ? 'streamer' : 'agency';
+  };
+
+  // Helper: check if a track comes from assigned collections for this streamer
+  const isTrackFromAssignedCollections = (trackId: string): boolean => {
+    try {
+      const assignmentsData = localStorage.getItem('music_collection_assignments');
+      let assignments: Record<string, string[]> = {};
+      try {
+        assignments = assignmentsData ? JSON.parse(assignmentsData) : {};
+        if (!assignments || typeof assignments !== 'object') assignments = {};
+      } catch {
+        assignments = {};
+      }
+      let clients: any[] = [];
+      try {
+        const clientsData = localStorage.getItem('music_clients');
+        clients = clientsData ? JSON.parse(clientsData) : [];
+        if (!Array.isArray(clients)) clients = [];
+      } catch {
+        clients = [];
+      }
+      for (const client of clients) {
+        for (const collection of client.collections || []) {
+          const assignedStreamerIds = assignments[collection.id] || [];
+          if (assignedStreamerIds.includes(currentStreamer.id) && collection.tracks?.includes(trackId)) {
+            return true;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to resolve assigned collections for track:', e);
+    }
+    return false;
+  };
+
+  // New UX handlers
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+  };
+
+  const handleGroupByChange = (newGroupBy: 'mood' | 'category' | 'collection' | 'none') => {
+    setGroupBy(newGroupBy);
+  };
+
+  const handleSortByChange = (newSortBy: 'title' | 'artist' | 'recent' | 'favorite') => {
+    setSortBy(newSortBy);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleLoadMore = () => {
+    setCurrentPage(prev => prev + 1);
+  };
+
+  // Get recently played and favorited tracks for pinned section
+  const recentlyPlayed = TrackFilterService.getRecentlyPlayed(streamerTracks, 5);
+  const mostFavorited = TrackFilterService.getMostFavorited(streamerTracks, 5);
+
+  // Render function for individual tracks
+  const renderTrack = (track: Track, index: number) => {
+    const isFavorited = streamerFavoritesService.isFavorited(currentStreamer.id, track.id);
+    const source = getTrackSource(track);
     
-    // Check if track is already assigned
-    if (currentStreamer.soundboardConfig.favoriteTracks.includes(track.id)) {
-      console.log('🎵 Track already assigned, skipping');
+    return (
+      <motion.div
+        key={track.id}
+        whileHover={{ scale: 1.01 }}
+        className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg hover:bg-gray-600/50 transition-colors"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center space-x-2 mb-1">
+            <h5 className="text-white font-medium truncate">{track.title}</h5>
+            <TrackSourceBadge source={source} />
+            {isFavorited && (
+              <span className="px-2 py-0.5 bg-yellow-600/20 text-yellow-400 text-xs rounded-full font-medium">
+                ⭐ Favorited
+              </span>
+            )}
+          </div>
+          <p className="text-gray-400 text-sm truncate">{track.artist}</p>
+          <div className="flex items-center space-x-2 mt-1">
+            <span className="px-2 py-0.5 bg-blue-600/20 text-blue-400 text-xs rounded">
+              {track.category}
+            </span>
+            <span className="px-2 py-0.5 bg-purple-600/20 text-purple-400 text-xs rounded">
+              {track.mood}
+            </span>
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-2 ml-3">
+          <button
+            onClick={() => toggleFavorite(track)}
+            className={`p-2 rounded transition-colors ${
+              isFavorited 
+                ? 'text-yellow-400 hover:text-yellow-300' 
+                : 'text-gray-400 hover:text-yellow-400'
+            }`}
+            title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+          >
+            ⭐
+          </button>
+          <button
+            onClick={() => handlePlayTrack(track)}
+            className={`p-2 rounded transition-colors ${
+              playingTrackId === track.id
+                ? 'bg-red-600 hover:bg-red-700 text-white'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
+            title={playingTrackId === track.id ? 'Stop' : 'Play Preview'}
+          >
+            {playingTrackId === track.id ? (
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
+        </div>
+      </motion.div>
+    );
+  };
+
+
+  const addTrackToStreamer = (track: Track) => {
+    console.log('🎵 Adding track to streamer favorites:', track.title, 'for streamer:', currentStreamer.name);
+    
+    // Use favorites service as the source of truth
+    if (streamerFavoritesService.isFavorited(currentStreamer.id, track.id)) {
+      console.log('🎵 Track already in favorites, skipping');
       return;
     }
     
-    const updatedConfig = {
-      ...currentStreamer.soundboardConfig,
-      favoriteTracks: [...currentStreamer.soundboardConfig.favoriteTracks, track.id]
-    };
-    
-    console.log('🎵 Updated config:', updatedConfig);
-    
-    // Update streamer in localStorage (in real app, this would be an API call)
-    const demoStreamers = JSON.parse(localStorage.getItem('demo_streamers') || '[]');
-    const updatedStreamers = demoStreamers.map((s: any) => 
-      s.id === currentStreamer.id ? { ...s, soundboardConfig: updatedConfig } : s
-    );
-    localStorage.setItem('demo_streamers', JSON.stringify(updatedStreamers));
-    
-    // Notify parent component of the update
-    const updatedStreamer = { ...currentStreamer, soundboardConfig: updatedConfig };
-    onStreamerUpdate?.(updatedStreamer);
-    
-    // Update local state
-    setCurrentStreamer(updatedStreamer);
-    setStreamerTracks(prev => [...prev, track]);
-    console.log('🎵 Track added successfully');
+    streamerFavoritesService.addToFavorites(currentStreamer.id, track.id);
+    // Optimistically add to UI without full reload
+    setStreamerTracks(prev => (prev.some(t => t.id === track.id) ? prev : [...prev, track]));
+    // Defer a quiet refresh to reconcile any external changes
+    setTimeout(() => loadStreamerData(), 0);
   };
 
   const removeTrackFromStreamer = (trackId: string) => {
-    const updatedConfig = {
-      ...streamer.soundboardConfig,
-      favoriteTracks: streamer.soundboardConfig.favoriteTracks.filter(id => id !== trackId)
-    };
-    
-    // Update streamer in localStorage
-    const demoStreamers = JSON.parse(localStorage.getItem('demo_streamers') || '[]');
-    const updatedStreamers = demoStreamers.map((s: any) => 
-      s.id === streamer.id ? { ...s, soundboardConfig: updatedConfig } : s
-    );
-    localStorage.setItem('demo_streamers', JSON.stringify(updatedStreamers));
-    
-    // Notify parent component of the update
-    const updatedStreamer = { ...streamer, soundboardConfig: updatedConfig };
-    onStreamerUpdate?.(updatedStreamer);
-    
-    setStreamerTracks(prev => prev.filter(t => t.id !== trackId));
+    console.log('🗑️ Remove requested for track:', trackId, 'streamer:', currentStreamer.name);
+
+    // If it's favorited, just remove from favorites
+    if (streamerFavoritesService.isFavorited(currentStreamer.id, trackId)) {
+      streamerFavoritesService.removeFromFavorites(currentStreamer.id, trackId);
+      // Optimistically update UI without a full reload
+      if (!isTrackFromAssignedCollections(trackId)) {
+        setStreamerTracks(prev => prev.filter(t => t.id !== trackId));
+      }
+      // Defer a quiet refresh
+      setTimeout(() => loadStreamerData(), 0);
+      return;
+    }
+
+    // Otherwise, the track is present via assigned collections. Prevent mass removals.
+    // Inform the user to unassign the specific collection(s) instead.
+    showToast({
+      type: 'info',
+      title: 'Track comes from assigned collections',
+      message: 'To remove it, unassign the collection in Assigned Collections.'
+    });
   };
 
-  const availableForStreamer = availableTracks.filter(track => 
-    !currentStreamer.soundboardConfig.favoriteTracks.includes(track.id)
-  );
+  const availableForStreamer = availableTracks.filter(track => {
+    // Exclude tracks that are already in streamer's favorites (service is source of truth)
+    if (streamerFavoritesService.isFavorited(currentStreamer.id, track.id)) {
+      return false;
+    }
+    
+    // Exclude tracks that are in assigned collections
+    const assignmentsData = localStorage.getItem('music_collection_assignments');
+    let assignments: Record<string, string[]> = {};
+    try {
+      assignments = assignmentsData ? JSON.parse(assignmentsData) : {};
+      if (!assignments || typeof assignments !== 'object') assignments = {};
+    } catch {
+      assignments = {};
+    }
+    
+    let clients: any[] = [];
+    try {
+      const clientsData = localStorage.getItem('music_clients');
+      clients = clientsData ? JSON.parse(clientsData) : [];
+      if (!Array.isArray(clients)) clients = [];
+    } catch {
+      clients = [];
+    }
+    const assignedCollectionTracks: string[] = [];
+    
+    clients.forEach((client: any) => {
+      client.collections.forEach((collection: any) => {
+        const assignedStreamerIds = assignments[collection.id] || [];
+        if (assignedStreamerIds.includes(currentStreamer.id)) {
+          assignedCollectionTracks.push(...collection.tracks);
+        }
+      });
+    });
+    
+    return !assignedCollectionTracks.includes(track.id);
+  });
 
   const handlePlayTrack = async (track: Track) => {
     try {
@@ -230,58 +486,112 @@ const StreamerSoundboardManager: React.FC<StreamerSoundboardManagerProps> = ({
                 {currentStreamer.name}'s Soundboard Preview
               </h3>
               <div className="bg-gray-800 rounded-lg p-4 mb-4">
-                <p className="text-gray-400 text-sm mb-4">
+                <p className="text-gray-400 text-sm mb-6">
                   This shows how {currentStreamer.name} will see their soundboard. 
                   Use the Track Management tab to assign tracks to this streamer.
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {streamerTracks.length > 0 ? (
-                    streamerTracks.map((track) => (
-                      <div key={track.id} className="bg-gray-700 p-3 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <h4 className="text-white font-medium">{track.title}</h4>
-                            <p className="text-gray-400 text-sm">{track.artist}</p>
-                            <div className="flex items-center space-x-2 mt-2">
-                              <span className="px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded">
-                                {track.category}
-                              </span>
-                              <span className="px-2 py-1 bg-purple-600/20 text-purple-400 text-xs rounded">
-                                {track.mood}
-                              </span>
+                
+                {/* Search and Filter Controls */}
+                <div className="mb-6 space-y-4">
+                  <TrackSearch
+                    onSearch={handleSearch}
+                    placeholder="Search tracks by title, artist, or tags..."
+                    className="w-full"
+                  />
+                  
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center space-x-2">
+                      <label className="text-sm text-gray-400">Group by:</label>
+                      <select
+                        value={groupBy}
+                        onChange={(e) => handleGroupByChange(e.target.value as any)}
+                        className="px-3 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="mood">Mood</option>
+                        <option value="category">Category</option>
+                        <option value="collection">Collection</option>
+                        <option value="none">None</option>
+                      </select>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <label className="text-sm text-gray-400">Sort by:</label>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => handleSortByChange(e.target.value as any)}
+                        className="px-3 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="recent">Recent</option>
+                        <option value="favorite">Most Played</option>
+                        <option value="title">Title</option>
+                        <option value="artist">Artist</option>
+                      </select>
+                    </div>
                             </div>
                           </div>
-                          <button
-                            onClick={() => handlePlayTrack(track)}
-                            className={`ml-3 p-2 rounded-lg transition-colors ${
-                              playingTrackId === track.id
-                                ? 'bg-red-600 hover:bg-red-700 text-white'
-                                : 'bg-green-600 hover:bg-green-700 text-white'
-                            }`}
-                            title={playingTrackId === track.id ? 'Stop' : 'Play Preview'}
-                          >
-                            {playingTrackId === track.id ? (
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                              </svg>
-                            ) : (
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                              </svg>
-                            )}
-                          </button>
-                        </div>
+
+                {/* Pinned Tracks Section */}
+                {(recentlyPlayed.length > 0 || mostFavorited.length > 0) && (
+                  <div className="mb-6">
+                    <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+                      📌 Pinned Tracks
+                    </h4>
+                    <PinnedTracks
+                      recentlyPlayed={recentlyPlayed}
+                      favorited={mostFavorited}
+                      onPlayTrack={handlePlayTrack}
+                      onToggleFavorite={toggleFavorite}
+                      playingTrackId={playingTrackId}
+                      getTrackSource={getTrackSource}
+                    />
+                  </div>
+                )}
+                
+                {/* Track Groups */}
+                {filteredGroups.length > 0 ? (
+                  <div className="space-y-4">
+                    {filteredGroups.map((group) => (
+                      <TrackGroup
+                        key={group.id}
+                        title={group.title}
+                        count={group.count}
+                        tracks={group.tracks}
+                        renderTrack={renderTrack}
+                        defaultCollapsed={groupBy !== 'none'}
+                        emptyMessage={`No tracks found in ${group.title.toLowerCase()}`}
+                      />
+                    ))}
                       </div>
-                    ))
-                  ) : (
-                    <div className="col-span-full text-center py-8">
-                      <p className="text-gray-400">No tracks assigned to this streamer yet</p>
-                      <p className="text-gray-500 text-sm mt-1">
-                        Use the Track Management tab to add tracks
-                      </p>
+                ) : (
+                  <div className="text-center py-12 bg-gray-700/50 rounded-lg">
+                    <div className="text-6xl mb-4">🔍</div>
+                    <h3 className="text-lg font-semibold text-gray-300 mb-2">No tracks found</h3>
+                    <p className="text-gray-400 mb-4">
+                      {searchQuery 
+                        ? `No tracks match "${searchQuery}"` 
+                        : "No tracks assigned to this streamer yet"
+                      }
+                    </p>
+                    {!searchQuery && (
+                      <p className="text-gray-500 text-sm">Use the Track Management tab to assign tracks.</p>
+                    )}
                     </div>
                   )}
+
+                {/* Pagination */}
+                {pagination.totalItems > 0 && (
+                  <div className="mt-6 pt-4 border-t border-gray-700">
+                    <TrackPagination
+                      currentPage={currentPage}
+                      totalPages={pagination.totalPages}
+                      hasMore={pagination.hasMore}
+                      onLoadMore={handleLoadMore}
+                      onPageChange={handlePageChange}
+                      itemsPerPage={itemsPerPage}
+                      totalItems={pagination.totalItems}
+                    />
                 </div>
+                )}
               </div>
             </div>
           )}
@@ -302,7 +612,10 @@ const StreamerSoundboardManager: React.FC<StreamerSoundboardManagerProps> = ({
                         whileHover={{ scale: 1.02 }}
                       >
                         <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
                           <h4 className="text-white font-medium">{track.title}</h4>
+                            <TrackSourceBadge source="agency" />
+                          </div>
                           <p className="text-gray-400 text-sm">{track.artist}</p>
                           <div className="flex items-center space-x-2 mt-1">
                             <span className="px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded">
@@ -334,6 +647,13 @@ const StreamerSoundboardManager: React.FC<StreamerSoundboardManagerProps> = ({
                             )}
                           </button>
                           <button
+                            onClick={() => toggleFavorite(track)}
+                            className="p-1 text-gray-400 hover:text-yellow-400 transition-colors"
+                            title="Add to favorites"
+                          >
+                            ⭐
+                          </button>
+                          <button
                             onClick={() => addTrackToStreamer(track)}
                             className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded transition-colors"
                           >
@@ -358,7 +678,10 @@ const StreamerSoundboardManager: React.FC<StreamerSoundboardManagerProps> = ({
                         whileHover={{ scale: 1.02 }}
                       >
                         <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
                           <h4 className="text-white font-medium">{track.title}</h4>
+                            <TrackSourceBadge source={getTrackSource(track)} />
+                          </div>
                           <p className="text-gray-400 text-sm">{track.artist}</p>
                           <div className="flex items-center space-x-2 mt-1">
                             <span className="px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded">
@@ -388,6 +711,17 @@ const StreamerSoundboardManager: React.FC<StreamerSoundboardManagerProps> = ({
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                               </svg>
                             )}
+                          </button>
+                          <button
+                            onClick={() => toggleFavorite(track)}
+                            className={`p-1 transition-colors ${
+                              streamerFavoritesService.isFavorited(currentStreamer.id, track.id)
+                                ? 'text-yellow-400 hover:text-yellow-300'
+                                : 'text-gray-400 hover:text-yellow-400'
+                            }`}
+                            title={streamerFavoritesService.isFavorited(currentStreamer.id, track.id) ? "Remove from favorites" : "Add to favorites"}
+                          >
+                            ⭐
                           </button>
                           <button
                             onClick={() => removeTrackFromStreamer(track.id)}

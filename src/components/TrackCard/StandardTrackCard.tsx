@@ -12,6 +12,7 @@ import {
   copyAttribution,
   generateTrackCardId
 } from './utils';
+import SourceLabel from './SourceLabel';
 
 interface StandardTrackCardProps {
   track: Track;
@@ -29,6 +30,7 @@ interface StandardTrackCardProps {
   compact?: boolean;
   className?: string;
   onAnnounce?: (message: string) => void;
+  trackSource?: 'client' | 'streamer';
 }
 
 const StandardTrackCard: React.FC<StandardTrackCardProps> = ({
@@ -46,7 +48,8 @@ const StandardTrackCard: React.FC<StandardTrackCardProps> = ({
   showAdminControls = false,
   compact = false,
   className = '',
-  onAnnounce
+  onAnnounce,
+  trackSource
 }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [isInPlaylist, setIsInPlaylist] = useState(false);
@@ -122,9 +125,12 @@ const StandardTrackCard: React.FC<StandardTrackCardProps> = ({
       {/* Track Header */}
       <div className={`flex items-start justify-between ${sectionSpacing}`}>
         <div className="flex-1 min-w-0">
-          <h3 className={`${titleClass} truncate`} title={track.title}>
-            {track.title}
-          </h3>
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className={`${titleClass} truncate`} title={track.title}>
+              {track.title}
+            </h3>
+            {trackSource && <SourceLabel source={trackSource} />}
+          </div>
           <p className={`${artistClass} truncate`} title={track.artist}>
             {track.artist}
           </p>

@@ -541,6 +541,7 @@ const EnhancedMusicLibrary: React.FC<EnhancedMusicLibraryProps> = ({ userRole })
                 onEdit={handleTrackEdit}
                 isPlaying={currentlyPlaying === track.id}
                 onAnnounce={(message) => message && message}
+                trackSource="client"
               />
             ))}
           </motion.div>

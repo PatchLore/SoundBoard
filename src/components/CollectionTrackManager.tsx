@@ -9,12 +9,14 @@ interface CollectionTrackManagerProps {
   client: Client;
   collection: TrackCollection;
   onClose: () => void;
+  onCollectionUpdate?: () => void;
 }
 
 const CollectionTrackManager: React.FC<CollectionTrackManagerProps> = ({
   client,
   collection,
-  onClose
+  onClose,
+  onCollectionUpdate
 }) => {
   const [availableTracks, setAvailableTracks] = useState<Track[]>([]);
   const [collectionTracks, setCollectionTracks] = useState<Track[]>([]);
@@ -53,6 +55,10 @@ const CollectionTrackManager: React.FC<CollectionTrackManagerProps> = ({
       if (success) {
         setCollectionTracks(prev => [...prev, track]);
         console.log(`✅ Track "${track.title}" added to collection "${collection.name}"`);
+        // Notify parent component to refresh data
+        if (onCollectionUpdate) {
+          onCollectionUpdate();
+        }
       } else {
         console.error('Failed to add track to collection');
       }
@@ -67,6 +73,10 @@ const CollectionTrackManager: React.FC<CollectionTrackManagerProps> = ({
       if (success) {
         setCollectionTracks(prev => prev.filter(t => t.id !== trackId));
         console.log(`✅ Track removed from collection "${collection.name}"`);
+        // Notify parent component to refresh data
+        if (onCollectionUpdate) {
+          onCollectionUpdate();
+        }
       } else {
         console.error('Failed to remove track from collection');
       }
@@ -162,7 +172,12 @@ const CollectionTrackManager: React.FC<CollectionTrackManagerProps> = ({
                   whileHover={{ scale: 1.02 }}
                 >
                   <div className="flex-1">
-                    <h4 className="text-white font-medium">{track.title}</h4>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h4 className="text-white font-medium">{track.title}</h4>
+                      <span className="px-2 py-1 bg-green-600/20 text-green-400 text-xs rounded-full">
+                        Client Track
+                      </span>
+                    </div>
                     <p className="text-gray-400 text-sm">{track.artist}</p>
                     <div className="flex items-center space-x-2 mt-1">
                       <span className="px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded">
@@ -204,7 +219,12 @@ const CollectionTrackManager: React.FC<CollectionTrackManagerProps> = ({
                   whileHover={{ scale: 1.02 }}
                 >
                   <div className="flex-1">
-                    <h4 className="text-white font-medium">{track.title}</h4>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h4 className="text-white font-medium">{track.title}</h4>
+                      <span className="px-2 py-1 bg-green-600/20 text-green-400 text-xs rounded-full">
+                        Client Track
+                      </span>
+                    </div>
                     <p className="text-gray-400 text-sm">{track.artist}</p>
                     <div className="flex items-center space-x-2 mt-1">
                       <span className="px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded">
