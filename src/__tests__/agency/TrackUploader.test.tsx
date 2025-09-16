@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import TrackUploader from '../../components/admin/TrackUploader';
 import { Track } from '../../types/track';
 
 // Mock the trackManagementService
@@ -28,6 +27,10 @@ jest.mock('../../hooks/useAuth', () => ({
     verifyToken: jest.fn()
   })
 }));
+
+// Import after mocks are defined to ensure they apply
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const TrackUploader = require('../../components/admin/TrackUploader').default;
 
 // Mock URL.createObjectURL for JSDOM
 global.URL.createObjectURL = jest.fn(() => 'mock-object-url');
