@@ -13,8 +13,21 @@ jest.mock('../../services/trackManagementService', () => ({
   ]
 }));
 
-// Mock the useAuth hook
-jest.mock('../../hooks/useAuth');
+// Mock the useAuth hook with an explicit factory (for relative path mocks)
+jest.mock('../../hooks/useAuth', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user', email: 'test@example.com', role: 'agency' },
+    token: 'test-token',
+    isLoading: false,
+    error: null,
+    isAuthenticated: true,
+    isAgency: true,
+    isStreamer: false,
+    login: jest.fn(),
+    logout: jest.fn(),
+    verifyToken: jest.fn()
+  })
+}));
 
 // Mock URL.createObjectURL for JSDOM
 global.URL.createObjectURL = jest.fn(() => 'mock-object-url');
