@@ -30,13 +30,44 @@ jest.mock('framer-motion', () => {
   const React = require('react');
   const Noop = React.forwardRef((props: any, ref: any) => {
     // Filter out framer-motion specific props to avoid React warnings
-    const { whileHover, whileTap, animate, initial, exit, ...filteredProps } = props;
-    return React.createElement('div', { ...filteredProps, ref }, props.children);
+    const { 
+      whileHover, 
+      whileTap, 
+      animate, 
+      initial, 
+      exit, 
+      onHoverStart, 
+      onHoverEnd, 
+      layout,
+      ...filteredProps 
+    } = props;
+    
+    // Preserve the element type (button, div, etc.)
+    const elementType = props.as || 'div';
+    return React.createElement(elementType, { ...filteredProps, ref }, props.children);
   });
   const motionProxy = new Proxy(
     {},
     {
-      get: () => Noop,
+      get: (target, prop) => {
+        if (prop === 'button') {
+          return React.forwardRef((props: any, ref: any) => {
+            const { 
+              whileHover, 
+              whileTap, 
+              animate, 
+              initial, 
+              exit, 
+              onHoverStart, 
+              onHoverEnd, 
+              layout,
+              ...filteredProps 
+            } = props;
+            return React.createElement('button', { ...filteredProps, ref }, props.children);
+          });
+        }
+        return Noop;
+      },
     }
   );
   return {

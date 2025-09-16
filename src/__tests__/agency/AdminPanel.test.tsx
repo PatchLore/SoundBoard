@@ -6,6 +6,18 @@ import AdminPanel from '../../components/admin/AdminPanel';
 // Mock the trackManagementService
 jest.mock('../../services/trackManagementService');
 
+// Mock the TrackUploader component
+jest.mock('../../components/admin/TrackUploader', () => {
+  return function MockTrackUploader({ onClose }: { onClose: () => void }) {
+    return (
+      <div data-testid="track-uploader">
+        <h2>📁 Upload New Track</h2>
+        <button onClick={onClose}>✕</button>
+      </div>
+    );
+  };
+});
+
 // Mock data
 const mockTracks = [
   {
@@ -177,10 +189,8 @@ describe('AdminPanel Component', () => {
         render(<AdminPanel {...defaultProps} />);
       });
       
-      const manageTab = screen.getByRole('button', { name: '🎵 Manage Tracks' });
-      fireEvent.click(manageTab);
-      
-      const uploadButton = screen.getByText('+ Add Track');
+      // Click the upload button in the upload tab (default tab)
+      const uploadButton = screen.getByText('Upload New Track');
       fireEvent.click(uploadButton);
       
       // Should show uploader modal
@@ -192,10 +202,8 @@ describe('AdminPanel Component', () => {
         render(<AdminPanel {...defaultProps} />);
       });
       
-      const manageTab = screen.getByRole('button', { name: '🎵 Manage Tracks' });
-      fireEvent.click(manageTab);
-      
-      const uploadButton = screen.getByText('+ Add Track');
+      // Click the upload button in the upload tab (default tab)
+      const uploadButton = screen.getByText('Upload New Track');
       fireEvent.click(uploadButton);
       
       // Should show uploader
@@ -205,7 +213,7 @@ describe('AdminPanel Component', () => {
       const closeButton = screen.getByText('✕');
       fireEvent.click(closeButton);
       
-      // Should return to manage view
+      // Should return to upload view
       expect(screen.getByText('Track Management')).toBeInTheDocument();
     });
   });
@@ -228,7 +236,7 @@ describe('AdminPanel Component', () => {
     test('should load tracks on component mount', async () => {
       const mockGetAllTracks = jest.fn().mockResolvedValue(mockTracks);
       const trackManagementService = require('../../services/trackManagementService');
-      trackManagementService.getAllTracks = mockGetAllTracks;
+      trackManagementService.default.getAllTracks = mockGetAllTracks;
       
       await act(async () => {
         render(<AdminPanel {...defaultProps} />);
@@ -253,7 +261,7 @@ describe('AdminPanel Component', () => {
     test('should handle service errors gracefully', async () => {
       const mockGetAllTracks = jest.fn().mockRejectedValue(new Error('Service error'));
       const trackManagementService = require('../../services/trackManagementService');
-      trackManagementService.getAllTracks = mockGetAllTracks;
+      trackManagementService.default.getAllTracks = mockGetAllTracks;
       
       await act(async () => {
         render(<AdminPanel {...defaultProps} />);
@@ -266,7 +274,7 @@ describe('AdminPanel Component', () => {
     test('should handle empty tracks gracefully', async () => {
       const mockGetAllTracks = jest.fn().mockResolvedValue([]);
       const trackManagementService = require('../../services/trackManagementService');
-      trackManagementService.getAllTracks = mockGetAllTracks;
+      trackManagementService.default.getAllTracks = mockGetAllTracks;
       
       await act(async () => {
         render(<AdminPanel {...defaultProps} />);
