@@ -8,14 +8,7 @@ import { StreamingTrack } from '../../types/track';
 // Mock the unified audio controller
 jest.mock('../../services/unifiedAudioController');
 
-// Mock framer-motion
-jest.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
-  },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
-}));
+// framer-motion is mocked globally in setupTests.ts
 
 const mockAudioController = unifiedAudioController as jest.Mocked<typeof unifiedAudioController>;
 

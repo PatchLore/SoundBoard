@@ -1,7 +1,21 @@
+// Mock MUST come first (before any imports)
+jest.mock('../../hooks/useAuth', () => ({
+  useAuth: jest.fn(() => ({
+    user: { email: 'test@example.com', role: 'agency' },
+    token: 'test-token',
+    isLoading: false,
+    error: null,
+    login: jest.fn(),
+    logout: jest.fn(),
+    isAgency: true
+  }))
+}));
+
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { Track } from '../../types/track';
+import TrackUploader from '../../components/admin/TrackUploader';
 
 // Mock the trackManagementService
 jest.mock('../../services/trackManagementService', () => ({
@@ -12,25 +26,9 @@ jest.mock('../../services/trackManagementService', () => ({
   ]
 }));
 
-// Mock the useAuth hook with an explicit factory (use correct path to src/hooks from this test file)
-jest.mock('../../../hooks/useAuth', () => ({
-  useAuth: () => ({
-    user: { id: 'test-user', email: 'test@example.com', role: 'agency' },
-    token: 'test-token',
-    isLoading: false,
-    error: null,
-    isAuthenticated: true,
-    isAgency: true,
-    isStreamer: false,
-    login: jest.fn(),
-    logout: jest.fn(),
-    verifyToken: jest.fn()
-  })
-}));
+// (useAuth mock defined above with absolute path)
 
-// Import after mocks are defined to ensure they apply
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const TrackUploader = require('../../components/admin/TrackUploader').default;
+// (Imported TrackUploader via absolute path after mock)
 
 // Mock URL.createObjectURL for JSDOM
 global.URL.createObjectURL = jest.fn(() => 'mock-object-url');

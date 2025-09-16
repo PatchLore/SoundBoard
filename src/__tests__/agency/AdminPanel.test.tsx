@@ -62,30 +62,38 @@ describe('AdminPanel Component', () => {
   });
 
   describe('Initial Render', () => {
-    test('should render admin panel with correct title', () => {
-      render(<AdminPanel {...defaultProps} />);
+    test('should render admin panel with correct title', async () => {
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       expect(screen.getByText('Admin Panel')).toBeInTheDocument();
     });
 
-    test('should show tab navigation', () => {
-      render(<AdminPanel {...defaultProps} />);
+    test('should show tab navigation', async () => {
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       expect(screen.getByRole('button', { name: '📤 Upload Tracks' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '🎵 Manage Tracks' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '⚙️ Settings' })).toBeInTheDocument();
     });
 
-    test('should show close button', () => {
-      render(<AdminPanel {...defaultProps} />);
+    test('should show close button', async () => {
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       expect(screen.getByText('×')).toBeInTheDocument();
     });
   });
 
   describe('Tab Navigation', () => {
-    test('should switch to Manage Tracks tab', () => {
-      render(<AdminPanel {...defaultProps} />);
+    test('should switch to Manage Tracks tab', async () => {
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       const manageTab = screen.getByRole('button', { name: '🎵 Manage Tracks' });
       fireEvent.click(manageTab);
@@ -112,8 +120,10 @@ describe('AdminPanel Component', () => {
       });
     });
 
-    test('should show upload interface in upload tab', () => {
-      render(<AdminPanel {...defaultProps} />);
+    test('should show upload interface in upload tab', async () => {
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       const uploadTab = screen.getByRole('button', { name: '📤 Upload Tracks' });
       fireEvent.click(uploadTab);
@@ -123,8 +133,10 @@ describe('AdminPanel Component', () => {
   });
 
   describe('Track Management', () => {
-    test('should show upload new track button', () => {
-      render(<AdminPanel {...defaultProps} />);
+    test('should show upload new track button', async () => {
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       const manageTab = screen.getByRole('button', { name: '🎵 Manage Tracks' });
       fireEvent.click(manageTab);
@@ -133,8 +145,10 @@ describe('AdminPanel Component', () => {
       expect(uploadButton).toBeInTheDocument();
     });
 
-    test('should display track statistics correctly', () => {
-      render(<AdminPanel {...defaultProps} />);
+    test('should display track statistics correctly', async () => {
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       const manageTab = screen.getByRole('button', { name: '🎵 Manage Tracks' });
       fireEvent.click(manageTab);
@@ -144,8 +158,10 @@ describe('AdminPanel Component', () => {
       expect(screen.getByText('+ Add Track')).toBeInTheDocument();
     });
 
-    test('should show track management interface', () => {
-      render(<AdminPanel {...defaultProps} />);
+    test('should show track management interface', async () => {
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       const manageTab = screen.getByRole('button', { name: '🎵 Manage Tracks' });
       fireEvent.click(manageTab);
@@ -156,8 +172,10 @@ describe('AdminPanel Component', () => {
   });
 
   describe('Upload Functionality', () => {
-    test('should open track uploader when upload button is clicked', () => {
-      render(<AdminPanel {...defaultProps} />);
+    test('should open track uploader when upload button is clicked', async () => {
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       const manageTab = screen.getByRole('button', { name: '🎵 Manage Tracks' });
       fireEvent.click(manageTab);
@@ -170,7 +188,9 @@ describe('AdminPanel Component', () => {
     });
 
     test('should handle track upload successfully', async () => {
-      render(<AdminPanel {...defaultProps} />);
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       const manageTab = screen.getByRole('button', { name: '🎵 Manage Tracks' });
       fireEvent.click(manageTab);
@@ -191,8 +211,10 @@ describe('AdminPanel Component', () => {
   });
 
   describe('Settings Tab', () => {
-    test('should show settings interface', () => {
-      render(<AdminPanel {...defaultProps} />);
+    test('should show settings interface', async () => {
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       const settingsTab = screen.getByText('Settings');
       fireEvent.click(settingsTab);
@@ -217,8 +239,10 @@ describe('AdminPanel Component', () => {
       });
     });
 
-    test('should handle loading state', () => {
-      render(<AdminPanel {...defaultProps} />);
+    test('should handle loading state', async () => {
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       // Should show loading state initially
       expect(screen.getByText('Admin Panel')).toBeInTheDocument();
@@ -254,30 +278,38 @@ describe('AdminPanel Component', () => {
   });
 
   describe('Accessibility', () => {
-    test('should have proper heading structure', () => {
-      render(<AdminPanel {...defaultProps} />);
+    test('should have proper heading structure', async () => {
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       expect(screen.getByRole('heading', { name: 'Admin Panel' })).toBeInTheDocument();
     });
 
-    test('should have proper button roles', () => {
-      render(<AdminPanel {...defaultProps} />);
+    test('should have proper button roles', async () => {
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       expect(screen.getByRole('button', { name: '📤 Upload Tracks' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '🎵 Manage Tracks' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '⚙️ Settings' })).toBeInTheDocument();
     });
 
-    test('should have close button accessible', () => {
-      render(<AdminPanel {...defaultProps} />);
+    test('should have close button accessible', async () => {
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       expect(screen.getByRole('button', { name: '×' })).toBeInTheDocument();
     });
   });
 
   describe('Modal Behavior', () => {
-    test('should close when clicking outside modal', () => {
-      render(<AdminPanel {...defaultProps} />);
+    test('should close when clicking outside modal', async () => {
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       // Find the outer backdrop div by looking for the fixed inset-0 element
       const backdrop = document.querySelector('.fixed.inset-0.bg-black\\/50');
@@ -288,8 +320,10 @@ describe('AdminPanel Component', () => {
       expect(defaultProps.onClose).toHaveBeenCalled();
     });
 
-    test('should not close when clicking inside modal', () => {
-      render(<AdminPanel {...defaultProps} />);
+    test('should not close when clicking inside modal', async () => {
+      await act(async () => {
+        render(<AdminPanel {...defaultProps} />);
+      });
       
       const content = screen.getByText('Upload Tracks');
       fireEvent.click(content);

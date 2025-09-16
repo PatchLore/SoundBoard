@@ -159,7 +159,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto mb-4"></div>
                 <p className="text-gray-400">Loading tracks...</p>
               </div>
-            ) : tracks.length === 0 ? (
+            ) : (tracks || []).length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">🎵</div>
                 <h3 className="text-lg font-semibold text-white mb-2">No tracks yet</h3>
