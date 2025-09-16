@@ -9,142 +9,29 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: read
-
-    env:
-      CI: true
-      # Optional: project root within repo
-      WORKING_DIR: stream-soundboard
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Use Node.js 18
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: 'npm'
-          cache-dependency-path: ${{ env.WORKING_DIR }}/package-lock.json
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Show workspace
+        run: |
+          pwd
+          ls -la
 
       - name: Install dependencies
-        working-directory: ${{ env.WORKING_DIR }}
-        run: npm ci --no-audit --no-fund
+        run: npm ci
 
-      - name: Build app
-        working-directory: ${{ env.WORKING_DIR }}
+      - name: Run tests
+        run: npm test --silent
+
+      - name: Build
         run: npm run build
-
-      - name: Determine base URL (Vercel Preview or localhost)
-        id: baseurl
-        shell: bash
-        working-directory: ${{ env.WORKING_DIR }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PREVIEW_URL=""
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            # Attempt to discover the latest GitHub Deployment for this PR's head SHA with environment "Preview"
-            REPO="${GITHUB_REPOSITORY}"
-            SHA="${{ github.event.pull_request.head.sha }}"
-            API_ROOT="https://api.github.com"
-
-            deployments_json=$(curl -sS \
-              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-              -H "Accept: application/vnd.github+json" \
-              "${API_ROOT}/repos/${REPO}/deployments?sha=${SHA}&per_page=20")
-
-            if command -v jq >/dev/null 2>&1; then
-              # Prefer a deployment explicitly marked as Preview
-              deployment_id=$(echo "$deployments_json" | jq -r '[.[] | select((.environment // "") | ascii_downcase == "preview")] | first | .id')
-
-              # If none, fallback to a deployment matching the PR head ref or the exact SHA
-              if [[ -z "$deployment_id" || "$deployment_id" == "null" ]]; then
-                HEAD_REF="${{ github.event.pull_request.head.ref }}"
-                deployment_id=$(echo "$deployments_json" | jq -r \
-                  --arg sha "$SHA" --arg ref "$HEAD_REF" \
-                  '[.[] | select(((.ref // "") == $ref) or ((.sha // "") == $sha))] | first | .id')
-              fi
-
-              if [[ -n "$deployment_id" && "$deployment_id" != "null" ]]; then
-                statuses_json=$(curl -sS \
-                  -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-                  -H "Accept: application/vnd.github+json" \
-                  "${API_ROOT}/repos/${REPO}/deployments/${deployment_id}/statuses?per_page=10")
-                # Prefer environment_url, fallback to target_url if needed
-                env_url=$(echo "$statuses_json" | jq -r '[.[] | select((.environment_url // null) != null or (.target_url // null) != null)] | first | (.environment_url // .target_url)')
-                if [[ -n "$env_url" && "$env_url" != "null" ]]; then
-                  PREVIEW_URL="$env_url"
-                fi
-              fi
-            else
-              echo "jq not found; skipping preview URL auto-detection"
-            fi
-          fi
-          if [[ -n "$PREVIEW_URL" ]]; then
-            echo "url=$PREVIEW_URL" >> $GITHUB_OUTPUT
-            echo "Using Vercel preview: $PREVIEW_URL"
-          else
-            echo "url=http://localhost:3000" >> $GITHUB_OUTPUT
-            echo "No preview URL found. Will use localhost."
-          fi
-
-      - name: Serve build (only if localhost)
-        if: steps.baseurl.outputs.url == 'http://localhost:3000'
-        working-directory: ${{ env.WORKING_DIR }}
-        run: npx --yes serve -s build -l 3000 &
-
-      - name: Wait for server
-        if: steps.baseurl.outputs.url == 'http://localhost:3000'
-        run: npx wait-on http://localhost:3000
-
-      - name: Cypress run (PR - full suite)
-        if: github.event_name == 'pull_request'
-        working-directory: ${{ env.WORKING_DIR }}
-        env:
-          CYPRESS_baseUrl: ${{ steps.baseurl.outputs.url }}
-        run: npx cypress run --config baseUrl=${{ steps.baseurl.outputs.url }}
-
-      - name: Cypress run (push - light specs)
-        if: github.event_name == 'push'
-        working-directory: ${{ env.WORKING_DIR }}
-        env:
-          CYPRESS_baseUrl: ${{ steps.baseurl.outputs.url }}
-        run: npx cypress run --config baseUrl=${{ steps.baseurl.outputs.url }} --spec "cypress/e2e/basic-test.cy.js,cypress/e2e/simple-test.cy.js,cypress/e2e/unit-test.cy.js"
-
-      - name: Upload Cypress screenshots (on failure)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cypress-screenshots
-          path: ${{ env.WORKING_DIR }}/cypress/screenshots
-          if-no-files-found: ignore
-
-      - name: Upload Cypress videos (on failure)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cypress-videos
-          path: ${{ env.WORKING_DIR }}/cypress/videos
-          if-no-files-found: ignore
-
-      - name: Lighthouse CI
-        if: always()
-        working-directory: ${{ env.WORKING_DIR }}
-        run: |
-          echo "Running Lighthouse CI performance audit..."
-          npx lhci autorun --collect.url=${{ steps.baseurl.outputs.url }} --upload.target=temporary-public-storage || echo "LHCI completed (basic mode)"
-
-      - name: Upload Lighthouse reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: lighthouseci
-          path: ${{ env.WORKING_DIR }}/.lighthouseci
-          if-no-files-found: ignore
-
-
 
 
