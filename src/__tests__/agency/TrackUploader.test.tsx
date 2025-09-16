@@ -12,8 +12,8 @@ jest.mock('../../services/trackManagementService', () => ({
   ]
 }));
 
-// Mock the useAuth hook with an explicit factory (for relative path mocks)
-jest.mock('../../hooks/useAuth', () => ({
+// Mock the useAuth hook with an explicit factory (use correct path to src/hooks from this test file)
+jest.mock('../../../hooks/useAuth', () => ({
   useAuth: () => ({
     user: { id: 'test-user', email: 'test@example.com', role: 'agency' },
     token: 'test-token',
