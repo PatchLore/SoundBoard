@@ -57,6 +57,7 @@ class TrackStorageService {
   // Track Management
   public saveTrack(track: StreamingTrack): void {
     if (typeof localStorage === 'undefined') return;
+    try { require('../services/assignmentsBackupService').default.backup('save_track'); } catch {}
     const tracks = this.getAllTracks();
     const existingIndex = tracks.findIndex(t => t.id === track.id);
     
@@ -102,6 +103,7 @@ class TrackStorageService {
 
   public deleteTrack(trackId: string): boolean {
     if (typeof localStorage === 'undefined') return false;
+    try { require('../services/assignmentsBackupService').default.backup('delete_track'); } catch {}
     const tracks = this.getAllTracks();
     const filteredTracks = tracks.filter(t => t.id !== trackId);
     
@@ -208,6 +210,7 @@ class TrackStorageService {
     };
     
     clients.push(newClient);
+    try { require('../services/assignmentsBackupService').default.backup('create_client'); } catch {}
     localStorage.setItem(this.STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
     
     console.log(`👥 Client created: ${name}`);
@@ -232,6 +235,7 @@ class TrackStorageService {
 
   public updateClient(clientId: string, updates: Partial<Client>): boolean {
     if (typeof localStorage === 'undefined') return false;
+    try { require('../services/assignmentsBackupService').default.backup('update_client'); } catch {}
     const clients = this.getAllClients();
     const index = clients.findIndex(c => c.id === clientId);
     
@@ -246,6 +250,7 @@ class TrackStorageService {
 
   public deleteClient(clientId: string): boolean {
     if (typeof localStorage === 'undefined') return false;
+    try { require('../services/assignmentsBackupService').default.backup('delete_client'); } catch {}
     const clients = this.getAllClients();
     const filtered = clients.filter(c => c.id !== clientId);
     
@@ -260,9 +265,12 @@ class TrackStorageService {
   // Collection Management
   public createCollection(clientId: string, name: string, description?: string): TrackCollection | null {
     if (typeof localStorage === 'undefined') return null;
-    const client = this.getClient(clientId);
-    if (!client) return null;
+    try { require('../services/assignmentsBackupService').default.backup('create_collection'); } catch {}
+    const clients = this.getAllClients();
+    const clientIndex = clients.findIndex(c => c.id === clientId);
+    if (clientIndex < 0) return null;
     
+    const client = clients[clientIndex];
     const newCollection: TrackCollection = {
       id: `collection_${Date.now()}`,
       name,
@@ -275,13 +283,16 @@ class TrackStorageService {
     client.collections.push(newCollection);
     client.updatedAt = new Date();
     
-    this.updateClient(clientId, client);
+    // Update the client in the clients array and save to localStorage
+    clients[clientIndex] = client;
+    localStorage.setItem(this.STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
     console.log(`📁 Collection created: ${name} for client ${client.name}`);
     return newCollection;
   }
 
   public addTrackToCollection(collectionId: string, trackId: string): boolean {
     if (typeof localStorage === 'undefined') return false;
+    try { require('../services/assignmentsBackupService').default.backup('add_track_to_collection'); } catch {}
     const clients = this.getAllClients();
     
     for (const client of clients) {
@@ -292,9 +303,14 @@ class TrackStorageService {
           collection.updatedAt = new Date();
           client.updatedAt = new Date();
           
-          this.updateClient(client.id, client);
-          console.log(`📁 Track added to collection: ${trackId} -> ${collection.name}`);
-          return true;
+          // Update the client in the clients array and save to localStorage
+          const clientIndex = clients.findIndex(c => c.id === client.id);
+          if (clientIndex >= 0) {
+            clients[clientIndex] = client;
+            localStorage.setItem(this.STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
+            console.log(`📁 Track added to collection: ${trackId} -> ${collection.name}`);
+            return true;
+          }
         }
         break;
       }
@@ -304,6 +320,7 @@ class TrackStorageService {
 
   public removeTrackFromCollection(collectionId: string, trackId: string): boolean {
     if (typeof localStorage === 'undefined') return false;
+    try { require('../services/assignmentsBackupService').default.backup('remove_track_from_collection'); } catch {}
     const clients = this.getAllClients();
     
     for (const client of clients) {
@@ -315,9 +332,14 @@ class TrackStorageService {
           collection.updatedAt = new Date();
           client.updatedAt = new Date();
           
-          this.updateClient(client.id, client);
-          console.log(`📁 Track removed from collection: ${trackId} <- ${collection.name}`);
-          return true;
+          // Update the client in the clients array and save to localStorage
+          const clientIndex = clients.findIndex(c => c.id === client.id);
+          if (clientIndex >= 0) {
+            clients[clientIndex] = client;
+            localStorage.setItem(this.STORAGE_KEYS.CLIENTS, JSON.stringify(clients));
+            console.log(`📁 Track removed from collection: ${trackId} <- ${collection.name}`);
+            return true;
+          }
         }
         break;
       }
